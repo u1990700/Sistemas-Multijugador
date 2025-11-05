@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ca" color-mode="user">
+<head>
+    <meta charset="utf-8">
+    <title>{SITE_NAME} :: Recuperar contrasenya</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="author" content="Antonio Bueno (UdG)">
+    <link rel="icon" href="/favicon.png">
+    <link rel="stylesheet" href="mvp.css">
+    <link rel="stylesheet" href="el_meu.css">
+    <script defer src="el_meu.js"></script>
+</head>
+<body>
+<main>
+    <header>
+        <h1><a href="/">{SITE_NAME}</a></h1>
+        <div>{FEEDBACK}</div>
+    </header>
+
+    <section>
+        <form method="post" action="?page=recuperar">
+            <label for="reset_username">Nom d'usuari</label>
+            <input id="reset_username" type="text" name="user_name" required />
+
+            <label for="reset_email">Número de telefon</label>
+            <input id="reset_phone" type="tel" name="phone" pattern="^\+?[0-9]{9,15}$" placeholder="Ej: 34684256905" required />
+
+            <input type="hidden" name="csrf_token" value="{CSRF}" />
+            <input type="submit" name="request_reset" value="Enviar codi" />
+        </form>
+    </section>
+
+    <section>
+        <div><a href="?page=login">Tornar a l'inici de sessió</a></div>
+    </section>
+</main>
+</body>
+</html>

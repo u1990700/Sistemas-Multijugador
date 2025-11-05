@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="utf-8">
+    <title>{SITE_NAME} - Crear Partida</title>
+    <link rel="stylesheet" href="mvp.css">
+</head>
+<body>
+<main>
+    <header>
+        <h1>Crear una partida</h1>
+        <p>{FEEDBACK}</p>
+    </header>
+
+        <form method="POST" action="?page=jugar">
+            <label>Nom de la partida:</label>
+            <input type="text" name="nom_partida" required>
+            <input type="submit" value="Crear">
+        </form>
+        <a href="?page=jugar">Tornar</a>
+    </section>
+</main>
+</body>
+</html>
