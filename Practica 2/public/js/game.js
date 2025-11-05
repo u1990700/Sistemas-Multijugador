@@ -1,5 +1,4 @@
 // game.js — versión optimizada (menos lag)
-// Comentarios en castellano
 
 // --- Variables globales ---
 let idJoc = null;
@@ -174,11 +173,11 @@ function unirseAlJoc() {
 function arrancarRed() {
   // Poll de estado (3 Hz aprox.)
   if (netStatusTimer) clearInterval(netStatusTimer);
-  netStatusTimer = setInterval(comprovarEstatDelJoc, Math.round(1000 / NET_STATUS_HZ));
+  netStatusTimer = setInterval(comprovarEstatDelJoc, Math.round(50 / NET_STATUS_HZ));
 
   // Envío de movimiento (10 Hz aprox., sólo si cambia)
   if (netMoveTimer) clearInterval(netMoveTimer);
-  netMoveTimer = setInterval(enviarMovimentSiCambio, Math.round(1000 / NET_MOVE_HZ));
+  netMoveTimer = setInterval(enviarMovimentSiCambio, Math.round(50 / NET_MOVE_HZ));
 }
 
 // --- Leer estado del servidor ---
