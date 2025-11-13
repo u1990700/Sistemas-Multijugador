@@ -272,7 +272,7 @@ if (isset($_GET['page']) && $_GET['page'] === 'logout') {
     }
 
 
-    // navegación por GET (mostrar vistas)
+// navegación por GET (mostrar vistas)
 // crear partida
 } else if (isset($_POST['crear_partida'])) {
 

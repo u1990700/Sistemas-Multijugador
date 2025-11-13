@@ -1,5 +1,9 @@
 // game.js — versión optimizada (menos lag)
 
+const params = new URLSearchParams(window.location.search);
+const gameName = params.get("game_name");
+
+
 // --- Variables globales ---
 let idJoc = null;
 let idJugador = null;
@@ -18,8 +22,8 @@ let netMoveTimer = null;       // intervalo para enviar movimiento
 let circleInterval = null;     // intervalo para crear círculo (solo J1)
 
 // Para throttling de movimiento
-const NET_MOVE_HZ = 50;        // 10 Hz (cada 100 ms) es suficiente
-const NET_STATUS_HZ = 6;       // ~3 Hz para estado general
+const NET_MOVE_HZ = 10;        // 10 Hz (cada 100 ms) es suficiente
+const NET_STATUS_HZ = 0.15;       // ~3 Hz para estado general
 const MOVE_EPS = 1.5;          // umbral de cambio
 
 let lastSentX = null;
@@ -146,16 +150,21 @@ function updateGameArea() {
 
 // --- Alta en el juego ---
 function unirseAlJoc() {
-  fetch(`game.php?action=join&game_name=${encodeURIComponent(idJoc)}&circle_x=${Math.round(circle.x)}&circle_y=${Math.round(circle.y)}`, {
+  fetch(`game.php?action=join&game_name=${encodeURIComponent(gameName)}&circle_x=${Math.round(circle.x)}&circle_y=${Math.round(circle.y)}`, {
     method: 'GET',
     cache: 'no-store'
   })
 
     .then(r => r.json())
     .then(data => {
-      idJoc = data.game_id;
+
+      console.log(data);
+      
+      idJoc = data.game_name;
       idJugador = data.player_id;
       numJugador = data.num_jugador;
+
+      console.log(`Unido al juego ${idJoc} como Jugador ${numJugador} (ID: ${idJugador}) con círculo en (${data.circle_x}, ${data.circle_y})`);
 
       // Sincronizar círculo inicial desde servidor
       if (Number.isFinite(data.circle_x) && Number.isFinite(data.circle_y)) {
@@ -164,7 +173,7 @@ function unirseAlJoc() {
         circle.visible = true;
       }
 
-      // Arrancar bucles de red
+      // // Arrancar bucles de red
       arrancarRed();
     })
     .catch(console.error);
@@ -183,7 +192,9 @@ function arrancarRed() {
 
 // --- Leer estado del servidor ---
 function comprovarEstatDelJoc() {
+  //console.log(idJoc + ", " + circle.x + "," + circle.y);
   if (!idJoc) return;
+
 
   fetch(`game.php?action=status&game_id=${idJoc}`, { method: 'GET', cache: 'no-store' })
     .then(response => response.json())
@@ -192,7 +203,7 @@ function comprovarEstatDelJoc() {
         console.warn(joc.error);
         return;
       }
-
+      //console.log(joc);
 
       // Posiciones del otro jugador
       if (numJugador == 1) {
@@ -218,22 +229,25 @@ function comprovarEstatDelJoc() {
       if (typeof joc.points_player1 !== "undefined" && typeof joc.points_player2 !== "undefined") {
         p1_points = Number(joc.points_player1);
         p2_points = Number(joc.points_player2);
+        // console.log(`Puntuaciones actualizadas: P1=${p1_points}, P2=${p2_points}`);
         document.getElementById("p1_score").innerText = p1_points;
         document.getElementById("p2_score").innerText = p2_points;
+      }
+
+        // Círculo desde servidor (autoridad)
+      if (joc.circle_x !== null && joc.circle_y !== null) {
+        circle.x = Number(joc.circle_x);
+        circle.y = Number(joc.circle_y);
+        circle.visible = true;
+      } else {
+        // servidor indica que no hay círculo activo
+        circle.visible = false;
       }
 
     })
     .catch(console.error);
 
-  // Círculo desde servidor (autoridad)
-  if (joc.circle_x !== null && joc.circle_y !== null) {
-    circle.x = Number(joc.circle_x);
-    circle.y = Number(joc.circle_y);
-    circle.visible = true;
-  } else {
-    // servidor indica que no hay círculo activo
-    circle.visible = false;
-  }
+
 }
 
 // --- Enviar movimiento sólo si cambió lo suficiente ---
