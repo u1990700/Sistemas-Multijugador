@@ -1,7 +1,10 @@
 // game.js — versión optimizada (menos lag)
 
+const params = new URLSearchParams(window.location.search);
+const gameName = params.get("game_name");
+
 // --- Variables globales ---
-let idJoc = null;
+let idJoc = gameName;
 let idJugador = null;
 let numJugador = null;
 
@@ -13,14 +16,13 @@ let p2_points = 0;
 
 let circle = { x: 0, y: 0, radius: 15, visible: false };
 
-let netStatusTimer = null;     // intervalo para leer estado
-let netMoveTimer = null;       // intervalo para enviar movimiento
-let circleInterval = null;     // intervalo para crear círculo (solo J1)
+let netStatusTimer = null;
+let netMoveTimer = null;
+let circleInterval = null;
 
-// Para throttling de movimiento
-const NET_MOVE_HZ = 50;        // 10 Hz (cada 100 ms) es suficiente
-const NET_STATUS_HZ = 6;       // ~3 Hz para estado general
-const MOVE_EPS = 1.5;          // umbral de cambio
+const NET_MOVE_HZ = 10;
+const NET_STATUS_HZ = 3;
+const MOVE_EPS = 1.5;
 
 let lastSentX = null;
 let lastSentY = null;
@@ -32,23 +34,19 @@ function startGame() {
 
   myGameArea.start();
 
-  // Círculo inicial local (el servidor lo sobreescribirá con el real)
   createCircleLocal();
 
-  // Solo el Jugador 1 generará nuevos círculos cuando no haya uno visible
-  // (seguiremos sincronizados porque persistimos circle_x/y en servidor)
   circleInterval = setInterval(() => {
     if (numJugador === 1 && !circle.visible) {
       createCircleAndSync();
     }
   }, 2000);
 
-  addNetStatsLabel();        // añade el marcador a la UI
-  startLatencyMonitor();     // empieza a medir el ping
+  addNetStatsLabel();
+  startLatencyMonitor();
   unirseAlJoc();
 }
 
-// --- Lienzo ---
 const myGameArea = {
   canvas: document.createElement("canvas"),
   start: function () {
@@ -56,14 +54,13 @@ const myGameArea = {
     this.canvas.height = 270;
     this.context = this.canvas.getContext("2d");
     document.body.insertBefore(this.canvas, document.body.childNodes[0]);
-    this.interval = setInterval(updateGameArea, 20); // ~50 FPS
+    this.interval = setInterval(updateGameArea, 20);
   },
   clear: function () {
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
   },
 };
 
-// --- Entidad base ---
 function component(width, height, color, x, y) {
   this.width = width;
   this.height = height;
@@ -79,7 +76,7 @@ function component(width, height, color, x, y) {
   this.newPos = function () {
     this.x += this.speedX;
     this.y += this.speedY;
-    // Limitar dentro del canvas
+
     if (this.x < 0) { this.x = 0; this.speedX = 0; }
     if (this.x + this.width > myGameArea.canvas.width) {
       this.x = myGameArea.canvas.width - this.width; this.speedX = 0;
@@ -91,7 +88,6 @@ function component(width, height, color, x, y) {
   };
 }
 
-// --- Bucle de render ---
 function updateGameArea() {
   myGameArea.clear();
 
@@ -103,11 +99,9 @@ function updateGameArea() {
 
   drawCircle();
 
-  // Colisiones y puntos (local)
   if (checkCollision(Player1)) {
     if (circle.visible) {
       circle.visible = false;
-      // avisar al servidor que el círculo ya no está
       enviarPuntoAlServidor();
     }
     p1_points += 1;
@@ -116,21 +110,18 @@ function updateGameArea() {
   if (checkCollision(Player2)) {
     if (circle.visible) {
       circle.visible = false;
-      // avisar al servidor que el círculo ya no está
       enviarPuntoAlServidor();
     }
     p2_points += 1;
     document.getElementById("p2_score").innerText = p2_points;
   }
 
-  // Pintar puntuación
   const ctx = myGameArea.context;
   ctx.fillStyle = "black";
   ctx.font = "16px Arial";
   ctx.fillText("P1: " + p1_points, 10, 20);
   ctx.fillText("P2: " + p2_points, 400, 20);
 
-  // Condición de victoria local
   if (p1_points >= 10 || p2_points >= 10) {
     clearInterval(myGameArea.interval);
     clearInterval(circleInterval);
@@ -146,67 +137,58 @@ function updateGameArea() {
 
 // --- Alta en el juego ---
 function unirseAlJoc() {
-  fetch(`game.php?action=join&game_name=${encodeURIComponent(idJoc)}&circle_x=${Math.round(circle.x)}&circle_y=${Math.round(circle.y)}`, {
+  fetch(`game.php?action=join&game_name=${encodeURIComponent(gameName)}&circle_x=${Math.round(circle.x)}&circle_y=${Math.round(circle.y)}`, {
     method: 'GET',
     cache: 'no-store'
   })
-
     .then(r => r.json())
     .then(data => {
+
+      if (data.error) {
+        console.warn(data.error);
+        return;
+      }
+
       idJoc = data.game_id;
       idJugador = data.player_id;
       numJugador = data.num_jugador;
 
-      // Sincronizar círculo inicial desde servidor
       if (Number.isFinite(data.circle_x) && Number.isFinite(data.circle_y)) {
         circle.x = Number(data.circle_x);
         circle.y = Number(data.circle_y);
         circle.visible = true;
       }
 
-      // Arrancar bucles de red
       arrancarRed();
     })
     .catch(console.error);
 }
 
-// --- Red estable: un intervalo para estado y otro para movimiento ---
+// --- Red estable ---
 function arrancarRed() {
-  // Poll de estado (3 Hz aprox.)
   if (netStatusTimer) clearInterval(netStatusTimer);
-  netStatusTimer = setInterval(comprovarEstatDelJoc, Math.round(50 / NET_STATUS_HZ));
+  netStatusTimer = setInterval(comprovarEstatDelJoc, 1000 / NET_STATUS_HZ);
 
-  // Envío de movimiento (10 Hz aprox., sólo si cambia)
   if (netMoveTimer) clearInterval(netMoveTimer);
-  netMoveTimer = setInterval(enviarMovimentSiCambio, Math.round(50 / NET_MOVE_HZ));
+  netMoveTimer = setInterval(enviarMovimentSiCambio, 1000 / NET_MOVE_HZ);
 }
 
-// --- Leer estado del servidor ---
 function comprovarEstatDelJoc() {
   if (!idJoc) return;
 
   fetch(`game.php?action=status&game_id=${idJoc}`, { method: 'GET', cache: 'no-store' })
     .then(response => response.json())
     .then(joc => {
-      if (joc.error) {
-        console.warn(joc.error);
-        return;
-      }
+      if (joc.error) return;
 
-
-      // Posiciones del otro jugador
       if (numJugador == 1) {
-        if (joc.player2_x != null && joc.player2_y != null) {
-          Player2.x = Number(joc.player2_x);
-          Player2.y = Number(joc.player2_y);
-        }
+        if (joc.player2_x != null) Player2.x = Number(joc.player2_x);
+        if (joc.player2_y != null) Player2.y = Number(joc.player2_y);
       } else {
-        if (joc.player1_x != null && joc.player1_y != null) {
-          Player1.x = Number(joc.player1_x);
-          Player1.y = Number(joc.player1_y);
-        }
+        if (joc.player1_x != null) Player1.x = Number(joc.player1_x);
+        if (joc.player1_y != null) Player1.y = Number(joc.player1_y);
       }
-      // Círculo desde servidor
+
       if (joc.circle_x !== null && joc.circle_y !== null) {
         circle.x = Number(joc.circle_x);
         circle.y = Number(joc.circle_y);
@@ -215,28 +197,16 @@ function comprovarEstatDelJoc() {
         circle.visible = false;
       }
 
-      if (typeof joc.points_player1 !== "undefined" && typeof joc.points_player2 !== "undefined") {
+      if (typeof joc.points_player1 !== "undefined") {
         p1_points = Number(joc.points_player1);
         p2_points = Number(joc.points_player2);
         document.getElementById("p1_score").innerText = p1_points;
         document.getElementById("p2_score").innerText = p2_points;
       }
-
     })
     .catch(console.error);
-
-  // Círculo desde servidor (autoridad)
-  if (joc.circle_x !== null && joc.circle_y !== null) {
-    circle.x = Number(joc.circle_x);
-    circle.y = Number(joc.circle_y);
-    circle.visible = true;
-  } else {
-    // servidor indica que no hay círculo activo
-    circle.visible = false;
-  }
 }
 
-// --- Enviar movimiento sólo si cambió lo suficiente ---
 function enviarMovimentSiCambio() {
   if (!idJoc || !numJugador) return;
 
@@ -259,14 +229,11 @@ function enviarMovimentSiCambio() {
       cache: 'no-store'
     })
       .then(r => r.json())
-      .then(data => {
-        if (data.error) console.warn(data.error);
-      })
+      .then(() => {})
       .catch(console.error);
   }
 }
 
-// --- Entradas de teclado (ajustan velocidad, no envían red) ---
 document.addEventListener("keydown", function (event) {
   switch (event.key.toLowerCase()) {
     case "w": moveup(); break;
@@ -276,37 +243,23 @@ document.addEventListener("keydown", function (event) {
   }
 });
 
-// --- Movimiento local ---
 function moveup() {
-  if (numJugador === 1) {
-    if (Player1.speedY > -3) Player1.speedY -= 1.5;
-  } else {
-    if (Player2.speedY > -3) Player2.speedY -= 1.5;
-  }
+  if (numJugador === 1) { if (Player1.speedY > -3) Player1.speedY -= 1.5; }
+  else { if (Player2.speedY > -3) Player2.speedY -= 1.5; }
 }
 function movedown() {
-  if (numJugador === 1) {
-    if (Player1.speedY < 3) Player1.speedY += 1.5;
-  } else {
-    if (Player2.speedY < 3) Player2.speedY += 1.5;
-  }
+  if (numJugador === 1) { if (Player1.speedY < 3) Player1.speedY += 1.5; }
+  else { if (Player2.speedY < 3) Player2.speedY += 1.5; }
 }
 function moveleft() {
-  if (numJugador === 1) {
-    if (Player1.speedX > -3) Player1.speedX -= 1.5;
-  } else {
-    if (Player2.speedX > -3) Player2.speedX -= 1.5;
-  }
+  if (numJugador === 1) { if (Player1.speedX > -3) Player1.speedX -= 1.5; }
+  else { if (Player2.speedX > -3) Player2.speedX -= 1.5; }
 }
 function moveright() {
-  if (numJugador === 1) {
-    if (Player1.speedX < 3) Player1.speedX += 1.5;
-  } else {
-    if (Player2.speedX < 3) Player2.speedX += 1.5;
-  }
+  if (numJugador === 1) { if (Player1.speedX < 3) Player1.speedX += 1.5; }
+  else { if (Player2.speedX < 3) Player2.speedX += 1.5; }
 }
 
-// --- Círculo ---
 function createCircleLocal() {
   const radius = 15;
   const x = Math.random() * (myGameArea.canvas.width - 2 * radius) + radius;
@@ -314,7 +267,6 @@ function createCircleLocal() {
   circle = { x, y, radius, visible: true };
 }
 
-// Sólo J1 crea y sincroniza
 function createCircleAndSync() {
   createCircleLocal();
   if (!idJoc) return;
@@ -331,9 +283,6 @@ function createCircleAndSync() {
     cache: 'no-store'
   })
     .then(r => r.json())
-    .then(data => {
-      if (data.error) console.warn(data.error);
-    })
     .catch(console.error);
 }
 
@@ -351,11 +300,6 @@ function enviarPuntoAlServidor() {
   })
     .then(r => r.json())
     .then(data => {
-      if (data.error) {
-        console.warn(data.error);
-        return;
-      }
-      // Actualizar puntuaciones locales desde servidor
       if (data.p1_points != null) p1_points = Number(data.p1_points);
       if (data.p2_points != null) p2_points = Number(data.p2_points);
 
@@ -364,6 +308,7 @@ function enviarPuntoAlServidor() {
     })
     .catch(console.error);
 }
+
 function drawCircle() {
   if (circle && circle.visible) {
     const ctx = myGameArea.context;
@@ -384,7 +329,6 @@ function checkCollision(player) {
   return distance < (circle.radius + Math.max(player.width, player.height) / 2);
 }
 
-
 function addNetStatsLabel() {
   const lbl = document.createElement('div');
   lbl.id = 'net_stats';
@@ -401,20 +345,17 @@ function addNetStatsLabel() {
   document.body.appendChild(lbl);
 }
 
-
 let lastRttMs = null;
-let rttEma = null; // media exponencial para suavizar (opcional)
+let rttEma = null;
 
 function startLatencyMonitor() {
   setInterval(() => {
     const t0 = performance.now();
-    // cache-busting con ts y no-store
     fetch(`game.php?action=ping&ts=${Date.now()}`, { method: 'GET', cache: 'no-store' })
       .then(r => r.json())
       .then(() => {
         const rtt = Math.round(performance.now() - t0);
         lastRttMs = rtt;
-        // EMA con alpha=0.3 para suavizar, opcional
         rttEma = (rttEma == null) ? rtt : Math.round(0.3 * rtt + 0.7 * rttEma);
         const label = document.getElementById('net_stats');
         if (label) label.textContent = `RTT: ${rtt} ms (avg: ${rttEma} ms)`;
