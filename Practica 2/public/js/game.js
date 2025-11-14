@@ -1,6 +1,9 @@
 // game.js — versión optimizada (menos lag)
 
+
 // --- Variables globales ---
+
+
 let idJoc = null;
 let idJugador = null;
 let numJugador = null;
@@ -11,6 +14,8 @@ let Player2;
 let p1_points = 0;
 let p2_points = 0;
 
+
+
 let circle = { x: 0, y: 0, radius: 15, visible: false };
 
 let netStatusTimer = null;     // intervalo para leer estado
@@ -18,15 +23,33 @@ let netMoveTimer = null;       // intervalo para enviar movimiento
 let circleInterval = null;     // intervalo para crear círculo (solo J1)
 
 // Para throttling de movimiento
-const NET_MOVE_HZ = 50;        // 10 Hz (cada 100 ms) es suficiente
-const NET_STATUS_HZ = 6;       // ~3 Hz para estado general
+const NET_MOVE_HZ = 10;       // ~10 Hz (cada 100 ms) es suficiente
+const NET_STATUS_HZ = 0.15;    // 
 const MOVE_EPS = 1.5;          // umbral de cambio
+
+
+const POLLING_SLOW_MS = 50;    // Polling lent (1 Hz) per a l'estat general (quan no et mous)
+const FAST_POLLING_DURATION = 1000; // Temps (ms) que el polling ràpid es manté actiu després d'una tecla
+let pollingTimeout = null;       // Per gestionar el retorn al mode lent
+
+
+let lastRemoteUpdate = Date.now(); // Per rastrejar l'última vegada que vam rebre dades
+
+const MAX_SPEED = 3; // Definir la velocitat màxima per claredat
+
 
 let lastSentX = null;
 let lastSentY = null;
 
+// --- Funcions útils (afegides en converses anteriors, no mostrades aquí) ---
+// function getUrlParameter(name) { ... } 
+
+
 // --- Inicio del juego ---
 function startGame() {
+  // Aquí assumim que idJoc s'obté de la URL amb getUrlParameter()
+  // idJoc = getUrlParameter('game_name'); 
+
   Player1 = new component(30, 30, "red", 10, 120);
   Player2 = new component(30, 30, "blue", 300, 120);
 
@@ -43,8 +66,8 @@ function startGame() {
     }
   }, 2000);
 
-  addNetStatsLabel();        // ← añade el marcador a la UI
-  startLatencyMonitor();     // ← empieza a medir el ping
+  addNetStatsLabel();        // añade el marcador a la UI
+  startLatencyMonitor();     // empieza a medir el ping
   unirseAlJoc();
 }
 
@@ -56,7 +79,7 @@ const myGameArea = {
     this.canvas.height = 270;
     this.context = this.canvas.getContext("2d");
     document.body.insertBefore(this.canvas, document.body.childNodes[0]);
-    this.interval = setInterval(updateGameArea, 20); // ~50 FPS
+    this.interval = setInterval(updateGameArea, 10); // ~50 FPS
   },
   clear: function () {
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -110,8 +133,6 @@ function updateGameArea() {
       // avisar al servidor que el círculo ya no está
       enviarPuntoAlServidor();
     }
-    p1_points += 1;
-    document.getElementById("p1_score").innerText = p1_points;
   }
   if (checkCollision(Player2)) {
     if (circle.visible) {
@@ -119,8 +140,6 @@ function updateGameArea() {
       // avisar al servidor que el círculo ya no está
       enviarPuntoAlServidor();
     }
-    p2_points += 1;
-    document.getElementById("p2_score").innerText = p2_points;
   }
 
   // Pintar puntuación
@@ -146,10 +165,12 @@ function updateGameArea() {
 
 // --- Alta en el juego ---
 function unirseAlJoc() {
+  // Aquí s'hauria de passar idJoc si s'hagués implementat getUrlParameter
   fetch(`game.php?action=join&circle_x=${Math.round(circle.x)}&circle_y=${Math.round(circle.y)}`, {
     method: 'GET',
     cache: 'no-store'
   })
+
     .then(r => r.json())
     .then(data => {
       idJoc = data.game_id;
@@ -169,15 +190,17 @@ function unirseAlJoc() {
     .catch(console.error);
 }
 
-// --- Red estable: un intervalo para estado y otro para movimiento ---
-function arrancarRed() {
-  // Poll de estado (3 Hz aprox.)
-  if (netStatusTimer) clearInterval(netStatusTimer);
-  netStatusTimer = setInterval(comprovarEstatDelJoc, Math.round(50 / NET_STATUS_HZ));
+function setPollingSpeed(intervalMs) {
+    if (netStatusTimer) {
+        clearInterval(netStatusTimer);
+    }
+    netStatusTimer = setInterval(comprovarEstatDelJoc, intervalMs);
+}
 
-  // Envío de movimiento (10 Hz aprox., sólo si cambia)
-  if (netMoveTimer) clearInterval(netMoveTimer);
-  netMoveTimer = setInterval(enviarMovimentSiCambio, Math.round(50 / NET_MOVE_HZ));
+// game.js (Funció arrancarRed - Per Test Ràpid)
+function arrancarRed() {
+  // Comença amb polling lent (1 Hz)
+  setPollingSpeed(POLLING_SLOW_MS);
 }
 
 // --- Leer estado del servidor ---
@@ -191,65 +214,99 @@ function comprovarEstatDelJoc() {
         console.warn(joc.error);
         return;
       }
-       
+      
+            let PlayerRemot = numJugador === 1 ? Player2 : Player1;
+            let remot_speedX = numJugador === 1 ? joc.player2_x : joc.player1_x;
+            let remot_speedY = numJugador === 1 ? joc.player2_y : joc.player1_y;
 
-      // Posiciones del otro jugador
-      if (numJugador == 1) {
-        if (joc.player2_x != null && joc.player2_y != null) {
-          Player2.x = Number(joc.player2_x);
-          Player2.y = Number(joc.player2_y);
-        }
-      } else {
-        if (joc.player1_x != null && joc.player1_y != null) {
-          Player1.x = Number(joc.player1_x);
-          Player1.y = Number(joc.player1_y);
-        }
-      }
-           // Círculo desde servidor
+            // 1. Sincronització normal de velocitat
+            if (remot_speedX != null || remot_speedY != null) {
+                // Sols actualitzem si la velocitat real no és zero
+                if (remot_speedX != 0 || remot_speedY != 0) { 
+                    PlayerRemot.speedX = Number(remot_speedX);
+                    PlayerRemot.speedY = Number(remot_speedY);
+                    lastRemoteUpdate = Date.now(); // Actualitza el temps només si hi ha moviment
+                } else {
+                    // Si el servidor ens diu que la velocitat és 0 (aturada), l'apliquem immediatament
+                    PlayerRemot.speedX = 0;
+                    PlayerRemot.speedY = 0;
+                }
+            }
+
+            // 2. Mecanisme de Seguretat (Per la desincronització de l'aturada)
+            const MAX_INACTIVITY_MS = 2 * 200; // Utilitzem 200ms com a referència conservadora de latència
+            if (Date.now() - lastRemoteUpdate > MAX_INACTIVITY_MS) {
+                // Si el jugador remot s'ha mogut abans, forcem l'aturada per evitar la desincronització
+                PlayerRemot.speedX = 0;
+                PlayerRemot.speedY = 0;
+            }
+      
+      // Círculo desde servidor
       if (joc.circle_x !== null && joc.circle_y !== null) {
         circle.x = Number(joc.circle_x);
         circle.y = Number(joc.circle_y);
         circle.visible = true;
       } else {
+        // El servidor diu que NO hi ha cercle. Això vol dir que ha desaparegut/marcat.
+        
+        if (circle.visible) {
+            // El cercle era visible localment i ara el servidor diu que no ho és.
+            // Això implica que l'altre jugador acaba de marcar un punt.
+            // FORCEM l'actualització de la puntuació.
+            sincronitzarPuntuacioRemota(); 
+        }
         circle.visible = false;
       }
-      
-      if (typeof joc.points_player1 !== "undefined" && typeof joc.points_player2 !== "undefined") {
-          p1_points = Number(joc.points_player1);
-          p2_points = Number(joc.points_player2);
-          document.getElementById("p1_score").innerText = p1_points;
-          document.getElementById("p2_score").innerText = p2_points;
-        }
-      
+
     })
     .catch(console.error);
-    
-    // Círculo desde servidor (autoridad)
-    if (joc.circle_x !== null && joc.circle_y !== null) {
-      circle.x = Number(joc.circle_x);
-      circle.y = Number(joc.circle_y);
-      circle.visible = true;
-    } else {
-      // servidor indica que no hay círculo activo
-      circle.visible = false;
-    }
+
 }
 
-// --- Enviar movimiento sólo si cambió lo suficiente ---
+
+// game.js (Nova Funció per al Jugador Remot)
+function sincronitzarPuntuacioRemota() {
+    fetch(`game.php?action=status&game_id=${idJoc}`, { method: 'GET', cache: 'no-store' })
+        .then(response => response.json())
+        .then(joc => {
+            // L'acció status no conté la puntuació, hauríem de fer una acció nova o reintroduir-la a status.
+            // DONAT L'ESTAT ACTUAL DEL CODI, EL MÉS RÀPID ÉS CREAR UNA FUNCIÓ NOVA A PHP
+            // o reintroduir-la a status, però usant una acció addicional és més net.
+
+            // Utilitzant l'acció add_point amb una petita modificació per només llegir:
+             fetch('game.php?action=status_points&game_id='+idJoc, { method: 'GET', cache: 'no-store' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.p1_points != null) p1_points = Number(data.p1_points);
+                    if (data.p2_points != null) p2_points = Number(data.p2_points);
+                    document.getElementById("p1_score").innerText = p1_points;
+                    document.getElementById("p2_score").innerText = p2_points;
+                });
+        })
+        .catch(console.error);
+}
+
+
+
+// game.js (Fragment de la funció enviarMovimentSiCambio)
+
+// game.js (Fragment de la funció enviarMovimentSiCambio)
 function enviarMovimentSiCambio() {
   if (!idJoc || !numJugador) return;
 
-  const px = Math.round(numJugador === 1 ? Player1.x : Player2.x);
-  const py = Math.round(numJugador === 1 ? Player1.y : Player2.y);
+  // Llegeix les velocitats del jugador local
+  const px_speed = numJugador === 1 ? Player1.speedX : Player2.speedX;
+  const py_speed = numJugador === 1 ? Player1.speedY : Player2.speedY;
 
-  if (lastSentX === null || Math.abs(px - lastSentX) > MOVE_EPS || Math.abs(py - lastSentY) > MOVE_EPS) {
-    lastSentX = px;
-    lastSentY = py;
+  // Només envia si la velocitat (estat d'entrada) ha canviat RESPECTE L'ÚLTIM ENVIAMENT
+  if (lastSentX === null || px_speed !== lastSentX || py_speed !== lastSentY) {
+    lastSentX = px_speed; // Ara guarda la velocitat
+    lastSentY = py_speed; // Ara guarda la velocitat
 
     const body = new URLSearchParams();
     body.set('game_id', idJoc);
-    body.set('player_x', String(px));
-    body.set('player_y', String(py));
+    body.set('player_speed_x', String(px_speed)); // <-- Envia la velocitat
+    body.set('player_speed_y', String(py_speed)); // <-- Envia la velocitat
 
     fetch('game.php?action=movement', {
       method: 'POST',
@@ -265,44 +322,82 @@ function enviarMovimentSiCambio() {
   }
 }
 
-// --- Entradas de teclado (ajustan velocidad, no envían red) ---
+// game.js (Gestor keydown - CORREGIT)
 document.addEventListener("keydown", function (event) {
-  switch (event.key.toLowerCase()) {
-    case "w": moveup(); break;
-    case "a": moveleft(); break;
-    case "s": movedown(); break;
-    case "d": moveright(); break;
-  }
+    // Caldrà comprovar que la tecla no estigui ja premuda per evitar múltiples missatges
+    // Simplificant, enviem SEMPRE en keydown si la velocitat canvia.
+    if (!numJugador) return; 
+    
+    /*
+    // 1. Activar Polling Ràpid i Reiniciar Temporitzador
+    setPollingSpeed(POLLING_FAST_MS); 
+    if (pollingTimeout) clearTimeout(pollingTimeout);
+    
+    // 2. Programar el retorn a l'estat lent
+    pollingTimeout = setTimeout(() => {
+        setPollingSpeed(POLLING_SLOW_MS);
+    }, FAST_POLLING_DURATION);
+
+    // Aquí podem afegir una comprovació per evitar processar tecles ja premudes 
+    // si no vols que el navegador repeteixi l'acció amb keydown.
+    */
+    switch (event.key.toLowerCase()) {
+        case "w": moveup(); break;
+        case "a": moveleft(); break;
+        case "s": movedown(); break;
+        case "d": moveright(); break;
+        default: return; // No processar altres tecles
+    }
+    enviarMovimentSiCambio();
+});
+
+// game.js (Gestor keyup - CORREGIT)
+document.addEventListener("keyup", function (event) {
+  
+   if (!numJugador) return; 
+    /*
+    // 1. Activar Polling Ràpid per enviar l'estat d'aturada
+    setPollingSpeed(POLLING_FAST_MS); 
+    if (pollingTimeout) clearTimeout(pollingTimeout);
+    
+    // 2. Programar el retorn a l'estat lent
+    pollingTimeout = setTimeout(() => {
+        setPollingSpeed(POLLING_SLOW_MS);
+    }, FAST_POLLING_DURATION);
+    */
+    let player = numJugador === 1 ? Player1 : Player2;
+    
+    switch (event.key.toLowerCase()) {
+        case "w": 
+        case "s": 
+            player.speedY = 0; // Atura la velocitat vertical
+            break;
+        case "a": 
+        case "d": 
+            player.speedX = 0; // Atura la velocitat horitzontal
+            break;
+        default: return;
+    }
+    // Envia l'estat de velocitat = 0 (el missatge d'aturada)
+    enviarMovimentSiCambio(); 
 });
 
 // --- Movimiento local ---
 function moveup() {
-  if (numJugador === 1) {
-     if (Player1.speedY > -3) Player1.speedY -= 1.5;
-  } else {
-     if (Player2.speedY > -3) Player2.speedY -= 1.5;
-  }
+  let player = numJugador === 1 ? Player1 : Player2;
+  player.speedY = -MAX_SPEED; 
 }
 function movedown() {
-  if (numJugador === 1) {
-     if (Player1.speedY < 3) Player1.speedY += 1.5;
-  } else {
-     if (Player2.speedY < 3) Player2.speedY += 1.5;
-  }
+  let player = numJugador === 1 ? Player1 : Player2;
+  player.speedY = MAX_SPEED;
 }
 function moveleft() {
-  if (numJugador === 1) {
-     if (Player1.speedX > -3) Player1.speedX -= 1.5;
-  } else {
-     if (Player2.speedX > -3) Player2.speedX -= 1.5;
-  }
+  let player = numJugador === 1 ? Player1 : Player2;
+  player.speedX = -MAX_SPEED;
 }
 function moveright() {
-  if (numJugador === 1) {
-     if (Player1.speedX < 3) Player1.speedX += 1.5;
-  } else {
-     if (Player2.speedX < 3) Player2.speedX += 1.5;
-  }
+  let player = numJugador === 1 ? Player1 : Player2;
+  player.speedX = MAX_SPEED;
 }
 
 // --- Círculo ---
@@ -354,7 +449,7 @@ function enviarPuntoAlServidor() {
         console.warn(data.error);
         return;
       }
-      // Actualizar puntuaciones locales desde servidor
+      // Actualitzar puntuacions locals des del servidor (FET PER ESDEVENIMENT)
       if (data.p1_points != null) p1_points = Number(data.p1_points);
       if (data.p2_points != null) p2_points = Number(data.p2_points);
 
