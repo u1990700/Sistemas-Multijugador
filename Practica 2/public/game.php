@@ -22,7 +22,7 @@ try {
     $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $db->exec('PRAGMA journal_mode=WAL;');
     $db->exec('PRAGMA synchronous=NORMAL;');
-    $db->exec('PRAGMA busy_timeout=250;');
+    $db->exec('PRAGMA busy_timeout=2000;');
 } catch (PDOException $e) {
     echo json_encode(['error' => 'Connexió amb la base de dades fallida: ' . $e->getMessage()]);
     exit;
@@ -90,41 +90,45 @@ switch ($accio) {
     }
 
     case 'status': {
-    $game_id = inparam('game_id', '');
-    if ($game_id === '') {
-        echo json_encode(['error' => 'Falta game_id']);
+        $game_id = inparam('game_id', '');
+        if ($game_id === '') {
+            echo json_encode(['error' => 'Falta game_id']);
+            exit;
+        }
+
+        $stmt = $db->prepare('SELECT * FROM games WHERE game_id = :game_id');
+        $stmt->execute([':game_id' => $game_id]);
+        $joc = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$joc) {
+            echo json_encode(['error' => 'Joc no trobat']);
+            exit;
+        }
+
+        echo json_encode([
+            'ok' => 'todo ok',
+            'player1_x' => $joc['player1_x'],
+            'player1_y' => $joc['player1_y'],
+            'player2_x' => $joc['player2_x'],
+            'player2_y' => $joc['player2_y'],
+            'circle_x' => $joc['circle_x'],
+            'circle_y' => $joc['circle_y']
+            // ELIMINAT: Ja no enviem la puntuació aquí. Es fa amb add_point.
+            // 'points_player1' => (int) ($joc['points_player1'] ?? 0),
+            // 'points_player2' => (int) ($joc['points_player2'] ?? 0)
+        ]);
         exit;
     }
 
-    $stmt = $db->prepare('SELECT * FROM games WHERE game_id = :game_id');
-    $stmt->execute([':game_id' => $game_id]);
-    $joc = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$joc) {
-        echo json_encode(['error' => 'Joc no trobat']);
-        exit;
-    }
-
-    echo json_encode([
-        'ok'             => 'todo ok',
-        'player1_x'      => $joc['player1_x'],
-        'player1_y'      => $joc['player1_y'],
-        'player2_x'      => $joc['player2_x'],
-        'player2_y'      => $joc['player2_y'],
-        'circle_x'       => $joc['circle_x'],
-        'circle_y'       => $joc['circle_y'],
-        'points_player1' => (int)($joc['points_player1'] ?? 0),
-        'points_player2' => (int)($joc['points_player2'] ?? 0)
-    ]);
-    exit;
-}
-
+   // game.php, case 'movement' (Adaptat per rebre velocitat)
 
     case 'movement': {
         // Aceptamos POST preferentemente
         $game_id = inparam('game_id', '');
-        $player_x = (int) inparam('player_x', 0);
-        $player_y = (int) inparam('player_y', 0);
+        // REBEM VELOCITAT, NO POSICIÓ
+        $player_speed_x = (float) inparam('player_speed_x', 0);
+        $player_speed_y = (float) inparam('player_speed_y', 0);
 
         if ($game_id === '' || !$player_session_id) {
             echo json_encode(['error' => 'Paràmetres invàlids o sessió no vàlida']);
@@ -139,14 +143,16 @@ switch ($accio) {
             echo json_encode(['error' => 'Joc finalitzat o no trobat']);
             exit;
         }
-
+        
+        // UTITLITZEM ELS CAMPS x/y DE LA DB PER GUARDAR speed_x/y
         if ($joc['player1'] === $player_session_id) {
-            $stmt = $db->prepare('UPDATE games SET player1_x = :x, player1_y = :y WHERE game_id = :game_id');
-            $stmt->execute([':x' => $player_x, ':y' => $player_y, ':game_id' => $game_id]);
+        $stmt = $db->prepare('UPDATE games SET player1_x = :sx, player1_y = :sy WHERE game_id = :game_id');
+        $stmt->execute([':sx' => $player_speed_x, ':sy' => $player_speed_y, ':game_id' => $game_id]);
         } elseif ($joc['player2'] === $player_session_id) {
-            $stmt = $db->prepare('UPDATE games SET player2_x = :x, player2_y = :y WHERE game_id = :game_id');
-            $stmt->execute([':x' => $player_x, ':y' => $player_y, ':game_id' => $game_id]);
+            $stmt = $db->prepare('UPDATE games SET player2_x = :sx, player2_y = :sy WHERE game_id = :game_id');
+            $stmt->execute([':sx' => $player_speed_x, ':sy' => $player_speed_y, ':game_id' => $game_id]);
         } else {
+            $db->rollBack(); // Si hi ha un error, desfem
             echo json_encode(['error' => 'Jugador invàlid']);
             exit;
         }
@@ -228,15 +234,15 @@ switch ($accio) {
 
         $stmt->execute([':game_id' => $game_id]);
 
-        // Devolver puntuación actualizada
+        // Devolver puntuación actualizada (Això es manté per a la sincronització ràpida)
         $stmt = $db->prepare('SELECT points_player1, points_player2 FROM games WHERE game_id = :game_id');
         $stmt->execute([':game_id' => $game_id]);
         $p = $stmt->fetch(PDO::FETCH_ASSOC);
 
         echo json_encode([
             'ok' => 1,
-            'p1_points' => (int)$p['points_player1'],
-            'p2_points' => (int)$p['points_player2']
+            'p1_points' => (int) $p['points_player1'],
+            'p2_points' => (int) $p['points_player2']
         ]);
         exit;
     }
