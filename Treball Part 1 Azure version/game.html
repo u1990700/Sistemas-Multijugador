@@ -14,19 +14,18 @@
 
     body {
       display: flex;
-      justify-content: center;   /* centrar horizontal */
-      align-items: center;       /* centrar vertical */
-      background: #e3e3e3;       /* color de fondo de la página */
+      justify-content: center;   
+      align-items: center;       
+      background: #e3e3e3;       
       font-family: Arial, sans-serif;
     }
 
     canvas {
-      /* El juego internamente sigue siendo 480x270, pero lo escalamos */
       width: min(90vw, calc(90vh * (480 / 270)));
       height: auto;
 
       background-color: #f1f1f1;
-      background-image: url("img/fondo_megaman.png"); /* tu PNG de fondo */
+      background-image: url("img/fondo_megaman.png"); 
       background-size: cover;
       background-position: center;
 
@@ -37,7 +36,6 @@
       display: block;
     }
 
-    /* por si quieres ajustar el estilo del marcador RTT */
     #net_stats {
       font-family: Arial, sans-serif;
     }
@@ -45,8 +43,6 @@
 </head>
 
 <body onload="startGame()">
-
-  <!-- el canvas lo crea game.js dinámicamente, no hace falta más HTML -->
 
   <script src="js/game.js"></script>
 </body>
