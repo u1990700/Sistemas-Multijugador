@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="utf-8">
+    <title>{SITE_NAME} - Unir-se a Partida</title>
+    <link rel="stylesheet" href="mvp.css">
+</head>
+<body>
+<main>
+    <header>
+        <h1>Unir-se a una partida</h1>
+        <p>{FEEDBACK}</p>
+    </header>
+    <section>
+        <form method="POST" action="?page=unir_partida">
+            <label>Codi de la partida:</label>
+            <input type="text" name="codi_partida" required>
+            <input type="hidden" name="unir_partida" value="1">
+            <input type="submit" value="Unir-me">
+        </form>
+        <a href="?page=jugar">Tornar</a>
+    </section>
+</main>
+</body>
+</html>
