@@ -1,5 +1,7 @@
 // game.js — versión optimizada (menos lag)
 
+console.log("Version 1.0.0");
+
 const params = new URLSearchParams(window.location.search);
 const gameName = params.get("game_name");
 
@@ -25,6 +27,14 @@ let circleInterval = null;     // intervalo para crear círculo (solo J1)
 const NET_MOVE_HZ = 10;        // 10 Hz (cada 100 ms) es suficiente
 const NET_STATUS_HZ = 0.15;       // ~3 Hz para estado general
 const MOVE_EPS = 1.5;          // umbral de cambio
+
+const POLLING_SLOW_MS = 50;    // Polling lent (1 Hz) per a l'estat general (quan no et mous)
+const FAST_POLLING_DURATION = 500; // Temps (ms) que el polling ràpid es manté actiu després d'una tecla
+let pollingTimeout = null;       // Per gestionar el retorn al mode lent
+
+
+const MAX_SPEED = 3; // Definir la velocitat màxima per claredat
+
 
 let lastSentX = null;
 let lastSentY = null;
@@ -179,15 +189,27 @@ function unirseAlJoc() {
     .catch(console.error);
 }
 
+
+function setPollingSpeed(intervalMs) {
+    if (netStatusTimer) {
+        clearInterval(netStatusTimer);
+    }
+    netStatusTimer = setInterval(comprovarEstatDelJoc, intervalMs);
+}
+
+
 // --- Red estable: un intervalo para estado y otro para movimiento ---
 function arrancarRed() {
   // Poll de estado (3 Hz aprox.)
-  if (netStatusTimer) clearInterval(netStatusTimer);
-  netStatusTimer = setInterval(comprovarEstatDelJoc, Math.round(50 / NET_STATUS_HZ));
+  // if (netStatusTimer) clearInterval(netStatusTimer);
+ // netStatusTimer = setInterval(comprovarEstatDelJoc, Math.round(50 / NET_STATUS_HZ));
 
   // Envío de movimiento (10 Hz aprox., sólo si cambia)
-  if (netMoveTimer) clearInterval(netMoveTimer);
-  netMoveTimer = setInterval(enviarMovimentSiCambio, Math.round(50 / NET_MOVE_HZ));
+  //if (netMoveTimer) clearInterval(netMoveTimer);
+  //netMoveTimer = setInterval(enviarMovimentSiCambio, Math.round(50 / NET_MOVE_HZ));
+  // Comença amb polling lent (1 Hz)
+
+  setPollingSpeed(POLLING_SLOW_MS);
 }
 
 // --- Leer estado del servidor ---
@@ -208,13 +230,21 @@ function comprovarEstatDelJoc() {
       // Posiciones del otro jugador
       if (numJugador == 1) {
         if (joc.player2_x != null && joc.player2_y != null) {
-          Player2.x = Number(joc.player2_x);
-          Player2.y = Number(joc.player2_y);
+          //Player2.x = Number(joc.player2_x);
+          //Player2.y = Number(joc.player2_y);
+
+          Player2.speedX = Number(joc.player2_x); // Actualitza la velocitat
+
+          Player2.speedY = Number(joc.player2_y); // Actualitza la velocitat
         }
       } else {
         if (joc.player1_x != null && joc.player1_y != null) {
-          Player1.x = Number(joc.player1_x);
-          Player1.y = Number(joc.player1_y);
+          //Player1.x = Number(joc.player1_x);
+         // Player1.y = Number(joc.player1_y);
+
+          Player1.speedX = Number(joc.player1_x); // <-- CANVI: Actualitza la velocitat
+
+          Player1.speedY = Number(joc.player1_y); // <-- CANVI: Actualitza la velocitat
         }
       }
       // Círculo desde servidor
@@ -254,17 +284,26 @@ function comprovarEstatDelJoc() {
 function enviarMovimentSiCambio() {
   if (!idJoc || !numJugador) return;
 
-  const px = Math.round(numJugador === 1 ? Player1.x : Player2.x);
-  const py = Math.round(numJugador === 1 ? Player1.y : Player2.y);
+  //const px = Math.round(numJugador === 1 ? Player1.x : Player2.x);
+  //const py = Math.round(numJugador === 1 ? Player1.y : Player2.y);
 
-  if (lastSentX === null || Math.abs(px - lastSentX) > MOVE_EPS || Math.abs(py - lastSentY) > MOVE_EPS) {
-    lastSentX = px;
-    lastSentY = py;
+  const px_speed = numJugador === 1 ? Player1.speedX : Player2.speedX;
+
+  const py_speed = numJugador === 1 ? Player1.speedY : Player2.speedY;
+
+  if (lastSentX === null || Math.abs(px_speed - lastSentX) > MOVE_EPS || Math.abs(py_speed - lastSentY) > MOVE_EPS) {
+    //lastSentX = px;
+    //lastSentY = py;
+
+    lastSentX = px_speed; // Ara guarda la velocitat
+
+    lastSentY = py_speed; // Ara guarda la velocitat
+
 
     const body = new URLSearchParams();
     body.set('game_id', idJoc);
-    body.set('player_x', String(px));
-    body.set('player_y', String(py));
+    body.set('player_x', String(px_speed));
+    body.set('player_y', String(py_speed));
 
     fetch('game.php?action=movement', {
       method: 'POST',
@@ -287,37 +326,79 @@ document.addEventListener("keydown", function (event) {
     case "a": moveleft(); break;
     case "s": movedown(); break;
     case "d": moveright(); break;
+    default: return;
   }
+  enviarMovimentSiCambio();
+});
+
+document.addEventListener("keyup", function (event) {
+   if (!numJugador) return;
+
+    let player = numJugador === 1 ? Player1 : Player2;
+    switch (event.key.toLowerCase()) {
+        case "w":
+        case "s":
+            player.speedY = 0; // Atura la velocitat vertical
+            break;
+        case "a":
+        case "d":
+            player.speedX = 0; // Atura la velocitat horitzontal
+            break;
+        default: return;
+    }
+    // Envia l'estat de velocitat = 0 (el missatge d'aturada)
+    enviarMovimentSiCambio();
+
 });
 
 // --- Movimiento local ---
 function moveup() {
+  /*
   if (numJugador === 1) {
     if (Player1.speedY > -3) Player1.speedY -= 1.5;
   } else {
     if (Player2.speedY > -3) Player2.speedY -= 1.5;
   }
+*/
+  let player = numJugador === 1 ? Player1 : Player2;
+  player.speedY = -MAX_SPEED;
+
 }
 function movedown() {
+  /*
   if (numJugador === 1) {
     if (Player1.speedY < 3) Player1.speedY += 1.5;
   } else {
     if (Player2.speedY < 3) Player2.speedY += 1.5;
   }
+*/
+  let player = numJugador === 1 ? Player1 : Player2;
+
+  player.speedY = MAX_SPEED;
 }
 function moveleft() {
+  /*
   if (numJugador === 1) {
     if (Player1.speedX > -3) Player1.speedX -= 1.5;
   } else {
     if (Player2.speedX > -3) Player2.speedX -= 1.5;
   }
+    */
+  let player = numJugador === 1 ? Player1 : Player2;
+
+  player.speedX = -MAX_SPEED;
 }
 function moveright() {
+  /*
   if (numJugador === 1) {
     if (Player1.speedX < 3) Player1.speedX += 1.5;
   } else {
     if (Player2.speedX < 3) Player2.speedX += 1.5;
   }
+*/
+  let player = numJugador === 1 ? Player1 : Player2;
+
+  player.speedX = MAX_SPEED;
 }
 
 // --- Círculo ---
