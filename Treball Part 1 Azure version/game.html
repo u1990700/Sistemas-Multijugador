@@ -1,26 +1,53 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<style>
-canvas {
-    border:1px solid #d3d3d3;
-    background-color: #f1f1f1;
-}
-    
-</style>
-    
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;   /* centrar horizontal */
+      align-items: center;       /* centrar vertical */
+      background: #e3e3e3;       /* color de fondo de la página */
+      font-family: Arial, sans-serif;
+    }
+
+    canvas {
+      /* El juego internamente sigue siendo 480x270, pero lo escalamos */
+      width: min(90vw, calc(90vh * (480 / 270)));
+      height: auto;
+
+      background-color: #f1f1f1;
+      background-image: url("img/fondo_megaman.png"); /* tu PNG de fondo */
+      background-size: cover;
+      background-position: center;
+
+      border: 1px solid #d3d3d3;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+
+      display: block;
+    }
+
+    /* por si quieres ajustar el estilo del marcador RTT */
+    #net_stats {
+      font-family: Arial, sans-serif;
+    }
+  </style>
 </head>
+
 <body onload="startGame()">
 
-<div style="text-align:center;width:480px;">
-</div>
+  <!-- el canvas lo crea game.js dinámicamente, no hace falta más HTML -->
 
-<div style="display:none;">
-    <span id="p1_score">0</span>
-    <span id="p2_score">0</span>
-</div>
-
-<script src="js/game.js"></script> 
+  <script src="js/game.js"></script>
 </body>
-</html> -
+</html>

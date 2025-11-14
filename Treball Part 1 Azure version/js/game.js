@@ -1,6 +1,6 @@
 // game.js — versión optimizada (menos lag)
 
-console.log("Version 1.0.0");
+console.log("Version 1.0.1");
 
 const params = new URLSearchParams(window.location.search);
 const gameName = params.get("game_name");
@@ -25,19 +25,18 @@ let circleInterval = null;     // intervalo para crear círculo (solo J1)
 
 // Para throttling de movimiento
 const NET_MOVE_HZ = 10;        // 10 Hz (cada 100 ms) es suficiente
-const NET_STATUS_HZ = 0.15;       // ~3 Hz para estado general
+const NET_STATUS_HZ = 0.15;    // ~3 Hz para estado general
 const MOVE_EPS = 1.5;          // umbral de cambio
 
 const POLLING_SLOW_MS = 50;    // Polling lent (1 Hz) per a l'estat general (quan no et mous)
 const FAST_POLLING_DURATION = 500; // Temps (ms) que el polling ràpid es manté actiu després d'una tecla
 let pollingTimeout = null;       // Per gestionar el retorn al mode lent
 
-
 const MAX_SPEED = 3; // Definir la velocitat màxima per claredat
-
 
 let lastSentX = null;
 let lastSentY = null;
+
 
 // --- Inicio del juego ---
 function startGame() {
@@ -49,16 +48,14 @@ function startGame() {
   // Círculo inicial local (el servidor lo sobreescribirá con el real)
   createCircleLocal();
 
-  // Solo el Jugador 1 generará nuevos círculos cuando no haya uno visible
-  // (seguiremos sincronizados porque persistimos circle_x/y en servidor)
   circleInterval = setInterval(() => {
     if (numJugador === 1 && !circle.visible) {
       createCircleAndSync();
     }
   }, 2000);
 
-  addNetStatsLabel();        // añade el marcador a la UI
-  startLatencyMonitor();     // empieza a medir el ping
+  addNetStatsLabel();
+  startLatencyMonitor();
   unirseAlJoc();
 }
 
@@ -77,7 +74,8 @@ const myGameArea = {
   },
 };
 
-// --- Entidad base ---
+// --- Entidad base (jugadores con sprites) ---
+// --- Entidad base (cubos) ---
 function component(width, height, color, x, y) {
   this.width = width;
   this.height = height;
@@ -85,11 +83,13 @@ function component(width, height, color, x, y) {
   this.speedY = 0;
   this.x = x;
   this.y = y;
+
   this.update = function () {
     const ctx = myGameArea.context;
     ctx.fillStyle = color;
     ctx.fillRect(this.x, this.y, this.width, this.height);
   };
+
   this.newPos = function () {
     this.x += this.speedX;
     this.y += this.speedY;
@@ -105,9 +105,12 @@ function component(width, height, color, x, y) {
   };
 }
 
+
 // --- Bucle de render ---
 function updateGameArea() {
   myGameArea.clear();
+
+  const ctx = myGameArea.context;
 
   Player1.newPos();
   Player1.update();
@@ -115,13 +118,32 @@ function updateGameArea() {
   Player2.newPos();
   Player2.update();
 
+  // ==== MARCA VISUAL DEL JUGADOR LOCAL ====
+  if (numJugador == 1 || numJugador == 2) {
+    const pl = (numJugador == 1) ? Player1 : Player2;
+
+    // Recuadro alrededor de tu personaje
+    ctx.save();
+    ctx.strokeStyle = 'yellow';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(pl.x - 4, pl.y - 4, pl.width + 8, pl.height + 8);
+    ctx.restore();
+
+    // Texto "TÚ" encima de tu personaje
+    ctx.save();
+    ctx.fillStyle = 'yellow';
+    ctx.font = '14px Arial';
+    ctx.fillText('TÚ', pl.x + pl.width / 2 - 10, pl.y - 10);
+    ctx.restore();
+  }
+  // ========================================
+
   drawCircle();
 
   // Colisiones y puntos (local)
   if (checkCollision(Player1)) {
     if (circle.visible) {
       circle.visible = false;
-      // avisar al servidor que el círculo ya no está
       enviarPuntoAlServidor();
     }
     p1_points += 1;
@@ -130,7 +152,6 @@ function updateGameArea() {
   if (checkCollision(Player2)) {
     if (circle.visible) {
       circle.visible = false;
-      // avisar al servidor que el círculo ya no está
       enviarPuntoAlServidor();
     }
     p2_points += 1;
@@ -138,11 +159,18 @@ function updateGameArea() {
   }
 
   // Pintar puntuación
-  const ctx = myGameArea.context;
   ctx.fillStyle = "black";
   ctx.font = "16px Arial";
   ctx.fillText("P1: " + p1_points, 10, 20);
   ctx.fillText("P2: " + p2_points, 400, 20);
+
+  // Info de qué jugador eres
+  if (numJugador == 1 || numJugador == 2) {
+    ctx.fillStyle = "orange";
+    ctx.font = "14px Arial";
+    const lado = (numJugador == 1) ? "izquierda" : "derecha";
+    ctx.fillText(`Tú eres J${numJugador} (${lado})`, 10, 40);
+  }
 
   // Condición de victoria local
   if (p1_points >= 10 || p2_points >= 10) {
@@ -157,6 +185,7 @@ function updateGameArea() {
     ctx.fillText(winner, 120, 140);
   }
 }
+
 
 // --- Alta en el juego ---
 function unirseAlJoc() {
@@ -183,7 +212,7 @@ function unirseAlJoc() {
         circle.visible = true;
       }
 
-      // // Arrancar bucles de red
+      // Arrancar bucles de red
       arrancarRed();
     })
     .catch(console.error);
@@ -200,23 +229,13 @@ function setPollingSpeed(intervalMs) {
 
 // --- Red estable: un intervalo para estado y otro para movimiento ---
 function arrancarRed() {
-  // Poll de estado (3 Hz aprox.)
-  // if (netStatusTimer) clearInterval(netStatusTimer);
- // netStatusTimer = setInterval(comprovarEstatDelJoc, Math.round(50 / NET_STATUS_HZ));
-
-  // Envío de movimiento (10 Hz aprox., sólo si cambia)
-  //if (netMoveTimer) clearInterval(netMoveTimer);
-  //netMoveTimer = setInterval(enviarMovimentSiCambio, Math.round(50 / NET_MOVE_HZ));
   // Comença amb polling lent (1 Hz)
-
   setPollingSpeed(POLLING_SLOW_MS);
 }
 
 // --- Leer estado del servidor ---
 function comprovarEstatDelJoc() {
-  //console.log(idJoc + ", " + circle.x + "," + circle.y);
   if (!idJoc) return;
-
 
   fetch(`game.php?action=status&game_id=${idJoc}`, { method: 'GET', cache: 'no-store' })
     .then(response => response.json())
@@ -225,26 +244,17 @@ function comprovarEstatDelJoc() {
         console.warn(joc.error);
         return;
       }
-      //console.log(joc);
 
-      // Posiciones del otro jugador
+      // Posiciones del otro jugador (en realidad, velocidades)
       if (numJugador == 1) {
         if (joc.player2_x != null && joc.player2_y != null) {
-          //Player2.x = Number(joc.player2_x);
-          //Player2.y = Number(joc.player2_y);
-
-          Player2.speedX = Number(joc.player2_x); // Actualitza la velocitat
-
-          Player2.speedY = Number(joc.player2_y); // Actualitza la velocitat
+          Player2.speedX = Number(joc.player2_x);
+          Player2.speedY = Number(joc.player2_y);
         }
       } else {
         if (joc.player1_x != null && joc.player1_y != null) {
-          //Player1.x = Number(joc.player1_x);
-         // Player1.y = Number(joc.player1_y);
-
-          Player1.speedX = Number(joc.player1_x); // <-- CANVI: Actualitza la velocitat
-
-          Player1.speedY = Number(joc.player1_y); // <-- CANVI: Actualitza la velocitat
+          Player1.speedX = Number(joc.player1_x);
+          Player1.speedY = Number(joc.player1_y);
         }
       }
       // Círculo desde servidor
@@ -259,46 +269,33 @@ function comprovarEstatDelJoc() {
       if (typeof joc.points_player1 !== "undefined" && typeof joc.points_player2 !== "undefined") {
         p1_points = Number(joc.points_player1);
         p2_points = Number(joc.points_player2);
-        // console.log(`Puntuaciones actualizadas: P1=${p1_points}, P2=${p2_points}`);
         document.getElementById("p1_score").innerText = p1_points;
         document.getElementById("p2_score").innerText = p2_points;
       }
 
-        // Círculo desde servidor (autoridad)
+      // Círculo desde servidor (autoridad, repetido en tu lógica original)
       if (joc.circle_x !== null && joc.circle_y !== null) {
         circle.x = Number(joc.circle_x);
         circle.y = Number(joc.circle_y);
         circle.visible = true;
       } else {
-        // servidor indica que no hay círculo activo
         circle.visible = false;
       }
 
     })
     .catch(console.error);
-
-
 }
 
 // --- Enviar movimiento sólo si cambió lo suficiente ---
 function enviarMovimentSiCambio() {
   if (!idJoc || !numJugador) return;
 
-  //const px = Math.round(numJugador === 1 ? Player1.x : Player2.x);
-  //const py = Math.round(numJugador === 1 ? Player1.y : Player2.y);
-
   const px_speed = numJugador === 1 ? Player1.speedX : Player2.speedX;
-
   const py_speed = numJugador === 1 ? Player1.speedY : Player2.speedY;
 
   if (lastSentX === null || Math.abs(px_speed - lastSentX) > MOVE_EPS || Math.abs(py_speed - lastSentY) > MOVE_EPS) {
-    //lastSentX = px;
-    //lastSentY = py;
-
-    lastSentX = px_speed; // Ara guarda la velocitat
-
-    lastSentY = py_speed; // Ara guarda la velocitat
-
+    lastSentX = px_speed;
+    lastSentY = py_speed;
 
     const body = new URLSearchParams();
     body.set('game_id', idJoc);
@@ -353,51 +350,19 @@ document.addEventListener("keyup", function (event) {
 
 // --- Movimiento local ---
 function moveup() {
-  /*
-  if (numJugador === 1) {
-    if (Player1.speedY > -3) Player1.speedY -= 1.5;
-  } else {
-    if (Player2.speedY > -3) Player2.speedY -= 1.5;
-  }
-*/
   let player = numJugador === 1 ? Player1 : Player2;
   player.speedY = -MAX_SPEED;
-
 }
 function movedown() {
-  /*
-  if (numJugador === 1) {
-    if (Player1.speedY < 3) Player1.speedY += 1.5;
-  } else {
-    if (Player2.speedY < 3) Player2.speedY += 1.5;
-  }
-*/
   let player = numJugador === 1 ? Player1 : Player2;
-
   player.speedY = MAX_SPEED;
 }
 function moveleft() {
-  /*
-  if (numJugador === 1) {
-    if (Player1.speedX > -3) Player1.speedX -= 1.5;
-  } else {
-    if (Player2.speedX > -3) Player2.speedX -= 1.5;
-  }
-    */
   let player = numJugador === 1 ? Player1 : Player2;
-
   player.speedX = -MAX_SPEED;
 }
 function moveright() {
-  /*
-  if (numJugador === 1) {
-    if (Player1.speedX < 3) Player1.speedX += 1.5;
-  } else {
-    if (Player2.speedX < 3) Player2.speedX += 1.5;
-  }
-*/
   let player = numJugador === 1 ? Player1 : Player2;
-
   player.speedX = MAX_SPEED;
 }
 
@@ -459,6 +424,7 @@ function enviarPuntoAlServidor() {
     })
     .catch(console.error);
 }
+
 function drawCircle() {
   if (circle && circle.visible) {
     const ctx = myGameArea.context;
@@ -504,7 +470,7 @@ function startLatencyMonitor() {
   setInterval(() => {
     const t0 = performance.now();
     // cache-busting con ts y no-store
-    fetch(`game.php?action=ping&ts=${Date.now()}`, { method: 'GET', cache: 'no-store' })
+    fetch(`game.php?action=ping&ts=${Date.now()}`, { method: 'GET', 'cache': 'no-store' })
       .then(r => r.json())
       .then(() => {
         const rtt = Math.round(performance.now() - t0);
