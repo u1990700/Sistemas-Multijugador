@@ -3,6 +3,8 @@ using Unity.Collections;
 using Unity.Networking.Transport;
 using UnityEditor.VersionControl;
 using System.Collections.Generic;
+//using TMPro;
+
 
 namespace Unity.Networking.Transport.Samples
 {
@@ -11,6 +13,10 @@ namespace Unity.Networking.Transport.Samples
         NetworkDriver m_Driver;
         NativeList<NetworkConnection> m_Connections;
         NetworkPipeline myPipeline;
+
+        //public TMP_Text ipDisplay;
+
+       // public TMP_Text clockText;
 
         public struct ClientInfo
         {
@@ -79,6 +85,7 @@ namespace Unity.Networking.Transport.Samples
                 Debug.Log($"Accepted a connection. {clientName} connected. Total: {m_Connections.Length}");
 
 
+
                 if (m_Connections.Length == 1)
                 {
                     //Enviar missatge de benvinguda(H +NOM_SERVIDOR + NOM_CLIENT + Temps)
@@ -93,6 +100,18 @@ namespace Unity.Networking.Transport.Samples
                     // Enviem missatge estès (H + Servidor + Nom + NomAnterior + Temps)
                     SendExtendedWelcomeMessage(c, clientName, SERVER_NAME, previousClientName, Time.time);
                 }
+
+                // 3. Obtener la IP del cliente que se conecta:
+                NetworkEndpoint endpoint = m_Driver.GetRemoteEndpoint(c);
+                string clientIP = endpoint.Address.ToString();
+
+
+                // 4. Actualizar el Text Mesh Pro con la IP obtenida:
+                //if (ipDisplay != null)
+                //{
+                    // Mostramos la IP del último cliente conectado
+                    //ipDisplay.TEX  = $"Última IP Conectada:\n{fullEndpoint}";
+               // }
 
 
 
