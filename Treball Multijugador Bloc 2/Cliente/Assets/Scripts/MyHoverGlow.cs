@@ -14,13 +14,11 @@ public class MyHoverGlow : MonoBehaviour, IPointerEnterHandler, IPointerExitHand
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        Debug.Log("hover on");
         outline.enabled = true;    // encender halo
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        Debug.Log("hover off");
         outline.enabled = false;   // apagar halo
     }
 }

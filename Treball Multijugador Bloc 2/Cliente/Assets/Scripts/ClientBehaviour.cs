@@ -1,8 +1,10 @@
-using UnityEngine;
-using Unity.Networking.Transport;
-using Unity.Collections;
 using System;
-
+using System.Collections.Generic;
+using Unity.Collections;
+using Unity.Networking.Transport;
+using Unity.Networking.Transport.Utilities;
+using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Unity.Networking.Transport.Samples
 {
@@ -15,24 +17,25 @@ namespace Unity.Networking.Transport.Samples
         [SerializeField] private string ip = "0.0.0.0";
         [SerializeField] private ushort port;
 
+        bool isConnected = false;
+        public static ClientBehaviour Instance;
+
         void Start()
         {
+            if (Instance != null && Instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
 
-            //m_Driver = NetworkDriver.Create();
-
-            //// Iniciem la pipeline per enviar missatges fragmentats i fiables
-            //myPipeline = m_Driver.CreatePipeline(
-            //    typeof(FragmentationPipelineStage), typeof(ReliableSequencedPipelineStage));
-
-
-            ////var endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(7777);
-            //var endpoint = NetworkEndpoint.Parse(ip, port);
-            //m_Connection = m_Driver.Connect(endpoint);
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
         }
 
         void OnDestroy()
         {
-            m_Driver.Dispose();
+            if (m_Driver.IsCreated)
+                m_Driver.Dispose();
         }
 
         public void ConnectToServer(string ip, ushort port)
@@ -53,84 +56,151 @@ namespace Unity.Networking.Transport.Samples
 
         void Update()
         {
+            if (!m_Driver.IsCreated)
+                return;
+
             m_Driver.ScheduleUpdate().Complete();
 
             if (!m_Connection.IsCreated)
-            {
                 return;
-            }
 
             DataStreamReader stream;
             NetworkEvent.Type cmd;
+
             while ((cmd = m_Connection.PopEvent(m_Driver, out stream)) != NetworkEvent.Type.Empty)
             {
                 if (cmd == NetworkEvent.Type.Connect)
                 {
-                    Debug.Log("Estem conectats al servidor");
+                    Debug.Log("Conectado al servidor.");
 
-                    // Afegim l'identificador 'A'  i el valor
+                    if (!isConnected)
+                    {
+                        isConnected = true;
+                        SceneManager.LoadScene("EscogerPersonaje");
+                    }
+
                     m_Driver.BeginSend(myPipeline, m_Connection, out var writer);
-                    writer.WriteByte((byte)'A'); // Identificador de missatge (CHAR)
+                    writer.WriteByte((byte)'A');
                     writer.WriteUInt(1);
                     m_Driver.EndSend(writer);
                 }
+
                 else if (cmd == NetworkEvent.Type.Data)
                 {
-                    // Llegir el CHAR identificador
-                    char messageId = (char)stream.ReadByte();
-                    if (messageId == 'H') // Missatge de benvinguda del servidor (Punt 8)
+                    Debug.Log("Entra");
+                    if (stream.Length <= 0)
+                        continue;
+
+                    char messageID = (char)stream.ReadByte();
+                    Debug.Log(messageID);
+                    Debug.Log($"Mensaje recibido: {messageID}");
+
+                    switch (messageID)
                     {
-                        // LLegir el NOM_SERVIDOR
-                        string serverName = stream.ReadFixedString32().ToString();
+                        case 'H':
+                            HandleWelcomeMessage(ref stream);
+                            break;
 
-                        // LLegir el NOM_CLIENT
-                        string clientName = stream.ReadFixedString32().ToString();
+                        case 'D':
+                            HandleAvailableCharacters(ref stream);
+                            break;
 
-                        // Inicialitzar el NOM_CLIENT_PREV
-                        string previousClientName = "N/A (Primer Client)";
+                        case 'E':
+                            HandleAcceptedSelection(ref stream);
+                            break;
 
-                        // La mida total de les dades menys el que ja hem llegit.
+                        case 'F':
+                            HandleDeniedSelection(ref stream);
+                            break;
 
-                        int bytesTotal = stream.Length;
+                        case 'G':
+                            Debug.Log("El servidor indica: ¡EMPIEZA EL JUEGO!");
+                            // SceneManager.LoadScene("EscenaJuego");
+                            break;
 
-                        int bytesRead = stream.GetBytesRead();
-
-                        int bytesRemaining = bytesTotal - bytesRead;
-
-
-                        if (bytesRemaining > 4)
-                        {
-                            // LLegir el NOM_CLIENT_ANTERIOR 
-                            previousClientName = stream.ReadFixedString32().ToString();
-                        }
-
-                        // LLegir el Temps
-                        float serverTime = stream.ReadFloat();
-
-                        // 5. Mostrar la informació per consola (Punt 10)
-                        if (previousClientName == "N/A (Primer Client)")
-                        {
-                            Debug.Log($"[H] Benvingut! Nom Servidor: **{serverName}**, El meu Nom: **{clientName}**, Temps Encès: **{serverTime:F2}s**.");
-                        }
-                        else
-                        {
-                            Debug.Log($"[H] Benvingut! Nom Servidor: **{serverName}**, El meu Nom: **{clientName}**, Client Anterior: **{previousClientName}**, Temps Encès: **{serverTime:F2}s**.");
-                        }
-
-
-                    } else
-                    {
-                        m_Connection.Disconnect(m_Driver);
-                        m_Connection = default;
+                        default:
+                            Debug.LogWarning($"Mensaje desconocido: {messageID}");
+                            break;
                     }
                 }
-                    
+
                 else if (cmd == NetworkEvent.Type.Disconnect)
                 {
-                    Debug.Log("Client got disconnected from server.");
+                    Debug.LogError("Cliente desconectado del servidor.");
                     m_Connection = default;
                 }
             }
         }
+
+
+
+        public void SendCharacterSelection(string characterName)
+        {
+            if (!m_Connection.IsCreated)
+            {
+                Debug.LogError("No hay conexión activa con el servidor.");
+                return;
+            }
+
+            Debug.Log($"Enviando selección al servidor: {characterName}");
+
+            m_Driver.BeginSend(myPipeline, m_Connection, out var writer);
+
+            // Código del mensaje
+            writer.WriteByte((byte)'C');
+
+            // Nombre del personaje
+            writer.WriteFixedString32(characterName);
+
+            m_Driver.EndSend(writer);
+        }
+
+
+        void HandleWelcomeMessage(ref DataStreamReader stream)
+        {
+            string serverName = stream.ReadFixedString32().ToString();
+            string clientName = stream.ReadFixedString32().ToString();
+
+            // Comprobamos si hay datos suficientes para un nombre extra
+            string previousName = "N/A";
+            if (stream.Length - stream.GetBytesRead() > 4)
+                previousName = stream.ReadFixedString32().ToString();
+
+            float time = stream.ReadFloat();
+
+            Debug.Log($"[H] Servidor: {serverName} | Cliente: {clientName} | Anterior: {previousName} | Tiempo: {time}");
+        }
+
+
+        void HandleAvailableCharacters(ref DataStreamReader stream)
+        {
+            int count = stream.ReadInt();
+            Debug.Log($"[D] {count} personajes disponibles:");
+
+            for (int i = 0; i < count; i++)
+            {
+                string ch = stream.ReadFixedString32().ToString();
+                Debug.Log($"   -> {ch}");
+            }
+        }
+
+
+        void HandleAcceptedSelection(ref DataStreamReader stream)
+        {
+            string accepted = stream.ReadFixedString32().ToString();
+            Debug.Log($"[E] Selección ACEPTADA: {accepted}");
+
+            // Logica para seleccion aceptada
+        }
+
+        void HandleDeniedSelection(ref DataStreamReader stream)
+        {
+            string denied = stream.ReadFixedString32().ToString();
+            Debug.LogError($"[F] Selección DENEGADA: {denied} ya está elegido.");
+
+            // Logica para seleccion denegada
+        }
+
+
     }
 }

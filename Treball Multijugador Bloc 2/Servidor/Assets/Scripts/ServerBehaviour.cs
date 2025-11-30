@@ -22,7 +22,7 @@ namespace Unity.Networking.Transport.Samples
 
         // Llista de tots els personatges posibles
         private List<string> allCharacters = new List<string> {
-            "Guerrero", "Mago", "Arquero", "Curandero" // Ejemplo de personajes
+            "Creeper", "Perro" // Ejemplo de personajes
         };
 
 
@@ -51,7 +51,7 @@ namespace Unity.Networking.Transport.Samples
             myPipeline = m_Driver.CreatePipeline(
                 typeof(FragmentationPipelineStage), typeof(ReliableSequencedPipelineStage));
 
-            var endpoint = NetworkEndpoint.AnyIpv4.WithPort(5051);
+            var endpoint = NetworkEndpoint.AnyIpv4.WithPort(5003);
 
 
             string serverIP = GetLocalIPAddress();
@@ -64,7 +64,7 @@ namespace Unity.Networking.Transport.Samples
 
             if (m_Driver.Bind(endpoint) != 0)
             {
-                Debug.LogError("Failed to bind to port 5051.");
+                Debug.LogError($"Failed to bind to port {serverPort}.");
                 return;
             }
             m_Driver.Listen();
@@ -184,6 +184,8 @@ namespace Unity.Networking.Transport.Samples
 
                             if (available.Contains(selectedChar))
                             {
+                                Debug.Log("Enviando mensaje de confirmación al cliente");
+
                                 // 3. ¡Selección ACEPTADA! (Punto 3b y 3c)
                                 m_ClientSelections[clientConnection] = selectedChar; // Guardar la elección
 
