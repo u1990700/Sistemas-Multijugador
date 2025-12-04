@@ -17,16 +17,20 @@ namespace Unity.Networking.Transport.Samples
         [SerializeField] private string ip = "0.0.0.0";
         [SerializeField] private ushort port;
 
+
         bool isConnected = false;
 
         public bool perro = false;
-
         public  bool creeper = false;
 
         string personajeSeleccionado = "";
 
         public static ClientBehaviour Instance;
 
+
+
+        public float posX = 0;
+        public float posY = 0;
 
 
 
@@ -130,6 +134,7 @@ namespace Unity.Networking.Transport.Samples
                             break;
 
                         case 'P': // <- ¡NUEVO CASO!
+                            Debug.Log("Entrando en P");
                             HandleCharacterPositions(ref stream);
                             break;
 
@@ -295,10 +300,13 @@ namespace Unity.Networking.Transport.Samples
                 data.CharacterName = stream.ReadFixedString32().ToString();
 
                 // Position X (float)
-                float posX = stream.ReadFloat();
+                float posicionX = stream.ReadFloat();
 
                 // Position Y (float)
-                float posY = stream.ReadFloat();
+                float posicionY = stream.ReadFloat();
+
+                posX = posicionX;
+                posY = posicionY;
 
                 data.Position = new Vector3(posX, posY, 0f); // Asumiendo Z=0 para 2D o plataformas
 
@@ -313,10 +321,10 @@ namespace Unity.Networking.Transport.Samples
             }
 
             // 4. Llamar al GameManager para crear los personajes en la escena
+            GameManager.Instance.SpawnCharacters(spawnList, personajeSeleccionado);
             if (GameManager.Instance != null)
             {
                 // Pasamos la lista de TODOS los personajes y el nombre del personaje LOCAL
-                GameManager.Instance.SpawnCharacters(spawnList, personajeSeleccionado);
             }
             else
             {

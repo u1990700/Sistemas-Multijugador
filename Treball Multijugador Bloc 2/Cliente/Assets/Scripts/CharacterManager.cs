@@ -11,24 +11,32 @@ public class CharacterManager : MonoBehaviour
     private void Start()
     {
         GameObject canvas = GameObject.Find("Canvas");
-        print(canvas);
+        float posicionX = ClientBehaviour.Instance.posX;
+        float posicionY = ClientBehaviour.Instance.posY;
+
+        Transform perroTransform = canvas.transform.Find("perroPersonaje");
+        Transform creeperTransform = canvas.transform.Find("creeperPersonaje");
+        //Debug.Log(posicionX);
+        //Debug.Log(posicionY);
+        perroTransform.gameObject.SetActive(true);
+        perroTransform.transform.position = new Vector3(posicionX, posicionY, 0);
+        creeperTransform.gameObject.SetActive(true);
+        creeperTransform.transform.position = new Vector3(posicionX, posicionY, 0);
 
         if (ClientBehaviour.Instance.perro == true) {
 
             Debug.Log("Perro visto");
 
-            Transform perroTransform = canvas.transform.Find("perroPersonaje");
+
             if (perroTransform != null)
             {
-                perroTransform.gameObject.SetActive(true);
             }
         }
         if (ClientBehaviour.Instance.creeper == true)
         {
-            Transform creeperTransform = canvas.transform.Find("creeperPersonaje");
             if (creeperTransform != null)
             {
-                creeperTransform.gameObject.SetActive(true);
+
             }
         }
     }
