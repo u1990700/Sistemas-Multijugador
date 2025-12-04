@@ -237,7 +237,10 @@ namespace Unity.Networking.Transport.Samples
 
                                 if (AreAllReady())
                                 {
-                                    SendGameStartToAll();
+                                    //SendGameStartToAll();
+                                    SendCharacterPositionsToAll();
+                                    SceneManager.LoadScene("EscenaJuego");
+
                                 }
                             }
 
@@ -395,8 +398,9 @@ namespace Unity.Networking.Transport.Samples
             m_Driver.EndSend(writer1);
 
             Debug.Log("GAME START: Sending 'G' message to all clients.");
-            SceneManager.LoadScene("EscenaJuego");
             SendCharacterPositionsToAll();
+            SceneManager.LoadScene("EscenaJuego");
+            
         }
 
 
@@ -414,14 +418,18 @@ namespace Unity.Networking.Transport.Samples
 
         private bool AreAllReady()
         {
+
+            return true;
+            /*
             // 1. Debe haber al menos 2 conexiones activas para empezar
-            if (m_Connections.Length < 2)
+            if (m_Connections.Length < 1)
             {
                 return false;
             }
 
             // 2. El número de selecciones debe ser igual al número de conexiones
             return m_ClientSelections.Count == m_Connections.Length;
+            */
         }
 
         private string GetLocalIPAddress()
@@ -443,7 +451,7 @@ namespace Unity.Networking.Transport.Samples
         void SendCharacterPositionsToAll()
         {
             // 1. Definir posiciones de aparición (hardcodeadas o generadas)
-            Vector2[] spawnPoints = { new Vector2(-5.0f, 0.0f), new Vector2(5.0f, 0.0f) };
+            Vector2[] spawnPoints = { new Vector2(75.0f, 75.0f), new Vector2(100f, 100f) };
 
             // Crear la lista usando la estructura pública del GameManager
             List<GameManager.CharacterSpawnData> spawnData = new List<GameManager.CharacterSpawnData>();
