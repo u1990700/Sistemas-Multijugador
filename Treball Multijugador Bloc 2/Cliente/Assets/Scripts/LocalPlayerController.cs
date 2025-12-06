@@ -29,6 +29,7 @@ public class LocalPlayerController : MonoBehaviour
             if (ClientBehaviour.Instance != null)
             {
                 ClientBehaviour.Instance.SendMovementUpdate(transform.position);
+                Debug.Log($"CLIENTE ENVÍA [M]: Posición {transform.position.x:F2}, {transform.position.y:F2}");
             }
             lastPosition = transform.position;
         }

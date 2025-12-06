@@ -25,6 +25,8 @@ namespace Unity.Networking.Transport.Samples
 
         public TMP_Text ipDisplay;
 
+        public ushort idPort = 5001;
+
         // Llista de tots els personatges posibles
         private List<string> allCharacters = new List<string> {
             "Creeper", "Perro" // Ejemplo de personajes
@@ -49,6 +51,9 @@ namespace Unity.Networking.Transport.Samples
         // Variable per guardar el client anterior
         string previousClientName = "";
 
+        private bool m_GameSceneReady = false;
+
+
         private void Awake()
         {
             // 2. Implementar Singleton y DontDestroyOnLoad
@@ -60,6 +65,7 @@ namespace Unity.Networking.Transport.Samples
 
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            Application.runInBackground = true;
         }
 
 
@@ -70,7 +76,7 @@ namespace Unity.Networking.Transport.Samples
             myPipeline = m_Driver.CreatePipeline(
                 typeof(FragmentationPipelineStage), typeof(ReliableSequencedPipelineStage));
 
-            var endpoint = NetworkEndpoint.AnyIpv4.WithPort(5002);
+            var endpoint = NetworkEndpoint.AnyIpv4.WithPort(idPort);
 
 
             string serverIP = GetLocalIPAddress();
@@ -238,14 +244,11 @@ namespace Unity.Networking.Transport.Samples
                                 if (AreAllReady())
                                 {
                                     //SendGameStartToAll();
-                                    SendCharacterPositionsToAll();
-                                    SceneManager.LoadScene("EscenaJuego");
 
+                                    SceneManager.LoadScene("EscenaJuego", LoadSceneMode.Single);
+                                    SendCharacterPositionsToAll();
                                 }
                             }
-
-
-
 
                             else
                             {
@@ -257,11 +260,25 @@ namespace Unity.Networking.Transport.Samples
                         }
                         else if (messageID == 'M')
                         {
+
+                            //COMPROBACIÓN ANTES DE CUALQUIER OTRA COSA
+                            if (!m_GameSceneReady)
+                            {
+                                // Descartamos mensajes de movimiento que llegan demasiado pronto
+                                Debug.LogWarning("Mensaje 'M' recibido antes de que GameManager esté listo. Ignorando...");
+                                // Asegúrate de consumir el resto del stream para no corromper el paquete.
+                                while (stream.Length > stream.GetBytesRead()) { stream.ReadByte(); }
+                                continue;
+                            }
+
                             NetworkConnection senderConnection = m_Connections[i];
 
                             // 1. Leer la posición (X, Y)
                             float posX = stream.ReadFloat();
                             float posY = stream.ReadFloat();
+
+
+                            Debug.Log($"Posicion x y {posX}, {posY}");
 
                             while (stream.Length > stream.GetBytesRead())
                             {
@@ -274,15 +291,18 @@ namespace Unity.Networking.Transport.Samples
                             BroadcastMovement(senderConnection, newPosition);
 
                             // 3. Actualizar la posición en la propia escena del Host
-                            if (GameManager.Instance != null)
-                            {
+                            //if (GameManager.Instance != null)
+                            //{
                                 // El Server necesita saber qué personaje está asociado a senderConnection
                                 string charName = m_ClientSelections.ContainsKey(senderConnection)
                                                 ? m_ClientSelections[senderConnection]
                                                 : "Unknown";
 
+                                Debug.Log($"{charName}");
+
+
                                 GameManager.Instance.UpdateRemotePlayerPosition(charName, newPosition);
-                            }
+                           //}
                         }
                     }
                     else if (cmd == NetworkEvent.Type.Disconnect)
@@ -537,6 +557,12 @@ namespace Unity.Networking.Transport.Samples
                     m_Driver.EndSend(writer);
                 }
             }
+        }
+
+        public void NotifyGameSceneReady()
+        {
+            m_GameSceneReady = true;
+            Debug.Log("SERVIDOR: GameManager listo. Procesando mensajes de juego.");
         }
 
     }

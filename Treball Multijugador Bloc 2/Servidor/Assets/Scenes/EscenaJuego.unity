@@ -130,13 +130,10 @@ GameObject:
   - component: {fileID: 304547460}
   - component: {fileID: 304547470}
   - component: {fileID: 304547469}
-  - component: {fileID: 304547468}
   - component: {fileID: 304547467}
-  - component: {fileID: 304547466}
   - component: {fileID: 304547465}
   - component: {fileID: 304547464}
   - component: {fileID: 304547463}
-  - component: {fileID: 304547462}
   - component: {fileID: 304547461}
   m_Layer: 0
   m_Name: creeperPersonaje
@@ -144,7 +141,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &304547460
 RectTransform:
   m_ObjectHideFlags: 0
@@ -176,7 +173,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_Actions: {fileID: 0}
   m_NotificationBehavior: 2
   m_UIInputModule: {fileID: 0}
   m_DeviceLostEvent:
@@ -270,18 +267,6 @@ MonoBehaviour:
   m_DefaultActionMap: Player
   m_SplitScreenIndex: -1
   m_Camera: {fileID: 0}
---- !u!114 &304547462
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 304547459}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8f6020415d39c6c4a8c43abfac5425d1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!61 &304547463
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -399,7 +384,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 304547466}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: CharacterSelectButton, Assembly-CSharp
         m_MethodName: OnSelect
         m_Mode: 1
@@ -411,18 +396,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
---- !u!114 &304547466
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 304547459}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5ea2b9788ef30b14bbf7766dd5a544c3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &304547467
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -438,18 +411,6 @@ MonoBehaviour:
   m_EffectColor: {r: 0.99086356, g: 1, b: 0, a: 0.5}
   m_EffectDistance: {x: 2, y: -2}
   m_UseGraphicAlpha: 1
---- !u!114 &304547468
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 304547459}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c29be8535e228b47aec9ddaddaebb86, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &304547469
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -757,13 +718,10 @@ GameObject:
   - component: {fileID: 778046760}
   - component: {fileID: 778046766}
   - component: {fileID: 778046765}
-  - component: {fileID: 778046764}
   - component: {fileID: 778046763}
-  - component: {fileID: 778046762}
   - component: {fileID: 778046761}
   - component: {fileID: 778046767}
   - component: {fileID: 778046768}
-  - component: {fileID: 778046769}
   - component: {fileID: 778046770}
   m_Layer: 0
   m_Name: perroPersonaje
@@ -771,7 +729,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &778046760
 RectTransform:
   m_ObjectHideFlags: 0
@@ -835,7 +793,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 778046762}
+      - m_Target: {fileID: 0}
         m_TargetAssemblyTypeName: CharacterSelectButton, Assembly-CSharp
         m_MethodName: OnSelect
         m_Mode: 1
@@ -847,18 +805,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
---- !u!114 &778046762
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 778046759}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5ea2b9788ef30b14bbf7766dd5a544c3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &778046763
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -874,18 +820,6 @@ MonoBehaviour:
   m_EffectColor: {r: 0.99086356, g: 1, b: 0, a: 1}
   m_EffectDistance: {x: 2, y: -2}
   m_UseGraphicAlpha: 1
---- !u!114 &778046764
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 778046759}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c29be8535e228b47aec9ddaddaebb86, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &778046765
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -997,18 +931,6 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
---- !u!114 &778046769
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 778046759}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8f6020415d39c6c4a8c43abfac5425d1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &778046770
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1021,7 +943,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  m_Actions: {fileID: 0}
   m_NotificationBehavior: 2
   m_UIInputModule: {fileID: 0}
   m_DeviceLostEvent:
@@ -1124,7 +1046,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 812413143}
-  - component: {fileID: 812413142}
   m_Layer: 0
   m_Name: PersonajeManager
   m_TagString: Untagged
@@ -1132,18 +1053,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &812413142
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 812413141}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b372cdd237bd25d4a923c7f133ff617f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!4 &812413143
 Transform:
   m_ObjectHideFlags: 0
@@ -1565,6 +1474,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8027a2485934ed04a8267130e32769e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  perroPersonaje: {fileID: 778046759}
+  creeperPersonaje: {fileID: 304547459}
   characterPrefabs: []
   LocalPlayerControlPrefab: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
