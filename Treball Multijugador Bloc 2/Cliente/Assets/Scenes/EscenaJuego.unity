@@ -336,6 +336,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 100
   jumpForce: 100
+  positionUpdateThreshold: 0.5
 --- !u!61 &304547463
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -1067,6 +1068,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   speed: 100
   jumpForce: 100
+  positionUpdateThreshold: 0.5
 --- !u!114 &778046770
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1225,7 +1227,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 812413141}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e6e404367a9898d419c29ba278ec0462, type: 3}
   m_Name: 

@@ -22,7 +22,7 @@ public class GameManager : MonoBehaviour
 
 
 
-    private void Awake() // <<--- ¡MUY IMPORTANTE!
+    private void Awake()
     {
         // 1. Asigna la instancia estática AQUI.
         if (Instance != null && Instance != this)
@@ -97,23 +97,29 @@ public class GameManager : MonoBehaviour
 
     public void UpdateRemotePlayerPosition(string characterName, Vector3 position)
     {
-        // 1. Obtener la referencia al GameObject
+        // Obtiene la referencia al GameObject estático (perroPersonaje o creeperPersonaje)
         GameObject playerObject = GetHostCharacterObject(characterName);
-
-        // En el cliente, esta función necesitaría buscar el GameObject instanciado.
-        // Pero asumiendo que el Host es el que llama a esta función con objetos estáticos,
-        // usamos la referencia directa.
 
         if (playerObject != null && playerObject.activeSelf)
         {
-            // 2. Actualizar la posición del GameObject que está en el Canvas
-            playerObject.transform.position = position;
-            Debug.Log($"SERVER HOST UPDATED: {characterName} a {position.x:F2}, {position.y:F2}");
+            // 1. Obtener el RectTransform (Necesario para actualizar UI)
+            RectTransform rect = playerObject.GetComponent<RectTransform>();
+
+            if (rect != null)
+            {
+                // 2. ACTUALIZACIÓN CORRECTA: Usamos la posición anclada (anchoredPosition)
+                // Esto replica la Pos X/Pos Y que viste en el Inspector de UI.
+                rect.anchoredPosition = new Vector2(position.x, position.y);
+
+                Debug.Log($"SERVER HOST UPDATED: {characterName} a {position.x:F2}, {position.y:F2}");
+            }
+            else
+            {
+                Debug.LogError($"Objeto {characterName} no tiene RectTransform para actualizar UI.");
+            }
         }
-        else
+        else // (Si playerObject es null o no está activo)
         {
-            // Este warning aparecerá en el cliente si recibe una actualización de un objeto que 
-            // aún no se ha creado o en el host si falta asignar la referencia.
             Debug.LogWarning($"UpdateRemotePlayerPosition: No se encontró o no está activo el personaje '{characterName}' para actualizar en el Host.");
         }
     }

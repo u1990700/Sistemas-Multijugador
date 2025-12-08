@@ -8,6 +8,7 @@ using static UnityEngine.InputSystem.InputRemoting;
 using System.Net.Sockets;
 using System.Net;
 using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 
 
 namespace Unity.Networking.Transport.Samples
@@ -471,7 +472,7 @@ namespace Unity.Networking.Transport.Samples
         void SendCharacterPositionsToAll()
         {
             // 1. Definir posiciones de aparición (hardcodeadas o generadas)
-            Vector2[] spawnPoints = { new Vector2(75.0f, 75.0f), new Vector2(100f, 100f) };
+            Vector2[] spawnPoints = { new Vector2(-75, 0f), new Vector2(100f, 100f) };
 
             // Crear la lista usando la estructura pública del GameManager
             List<GameManager.CharacterSpawnData> spawnData = new List<GameManager.CharacterSpawnData>();
@@ -507,6 +508,11 @@ namespace Unity.Networking.Transport.Samples
                         writer.WriteFixedString32(data.CharacterName);
                         writer.WriteFloat(data.Position.x);
                         writer.WriteFloat(data.Position.y);
+                        print("POSICION X");
+                        print(data.Position.x);
+                        print("POSICION Y");
+                        print(data.Position.y);
+
                     }
                     
                     m_Driver.EndSend(writer);

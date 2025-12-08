@@ -300,35 +300,12 @@ namespace Unity.Networking.Transport.Samples
                 // CharacterName (FixedString32)
                 data.CharacterName = stream.ReadFixedString32().ToString();
 
-                if (data.CharacterName == "Creeper")
-                {
-                    // Position X (float)
-                    float posicionXCreeper = stream.ReadFloat();
-
-                    // Position Y (float)
-                    float posicionYCreeper = stream.ReadFloat();
-
-                    posXPerro = posicionXCreeper;
-                    posYPerro = posicionYCreeper;
-                    data.Position = new Vector3(posXCreeper, posYCreeper, 0f); // Asumiendo Z=0 para 2D o plataformas
-                }
-                else if (data.CharacterName == "Perro")
-                {
-                    // Position X (float)
-                    float posicionXPerro = stream.ReadFloat();
-
-                    // Position Y (float)
-                    float posicionYPerro = stream.ReadFloat();
-
-                    posXPerro = posicionXPerro;
-                    posYPerro = posicionYPerro;
-                    data.Position = new Vector3(posXPerro, posYPerro, 0f); // Asumiendo Z=0 para 2D o plataformas
-
-                }
-
-
-
-
+                // --- ¡ESTRUCTURA DE LECTURA CORRECTA! ---
+                // Se lee X e Y para el personaje actual, sin if/else.
+                float posX = stream.ReadFloat();
+                float posY = stream.ReadFloat();
+                data.Position = new Vector3(posX, posY, 0f);
+                // --- SE ELIMINAN LAS VARIABLES TEMPORALES CONFUSAS (posicionXPerro, etc.) ---
 
 
                 spawnList.Add(data);

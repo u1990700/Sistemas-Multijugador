@@ -33,6 +33,10 @@ public class GameManager : MonoBehaviour
 
     // Fragmento de GameManager.cs (M�todo SpawnCharacters)
 
+
+
+
+
     public void SpawnCharacters(List<CharacterSpawnData> spawnData, string localPlayerName)
     {
         Debug.Log($"Iniciando spawning de {spawnData.Count} personajes. Local player: {localPlayerName}");
