@@ -244,7 +244,7 @@ namespace Unity.Networking.Transport.Samples
 
                                 if (AreAllReady())
                                 {
-                                    //SendGameStartToAll();
+                                    SendGameStartToAll();
 
                                     SceneManager.LoadScene("EscenaJuego", LoadSceneMode.Single);
                                     SendCharacterPositionsToAll();
@@ -440,17 +440,17 @@ namespace Unity.Networking.Transport.Samples
         private bool AreAllReady()
         {
 
-            return true;
-            /*
+           
+            
             // 1. Debe haber al menos 2 conexiones activas para empezar
-            if (m_Connections.Length < 1)
+            if (m_Connections.Length < 2)
             {
                 return false;
             }
 
             // 2. El número de selecciones debe ser igual al número de conexiones
             return m_ClientSelections.Count == m_Connections.Length;
-            */
+            
         }
 
         private string GetLocalIPAddress()

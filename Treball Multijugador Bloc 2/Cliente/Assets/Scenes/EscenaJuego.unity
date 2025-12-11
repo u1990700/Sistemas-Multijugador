@@ -148,8 +148,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8653b049fabde95488148c92946f2046, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  perro: {fileID: 778046759}
-  creeper: {fileID: 304547459}
+  perroPersonaje: {fileID: 778046759}
+  creeperPersonaje: {fileID: 304547459}
   characterPrefabs:
   - characterName: perroPersonaje
     prefab: {fileID: 778046759}
@@ -417,7 +417,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 304547459}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
   m_Name: 
@@ -478,7 +478,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ea2b9788ef30b14bbf7766dd5a544c3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  characterName: Perro
+  characterName: Creeper
 --- !u!114 &304547467
 MonoBehaviour:
   m_ObjectHideFlags: 0

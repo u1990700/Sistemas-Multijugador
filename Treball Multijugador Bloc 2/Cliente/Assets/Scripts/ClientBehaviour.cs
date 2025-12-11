@@ -134,12 +134,12 @@ namespace Unity.Networking.Transport.Samples
                             SceneManager.LoadScene("EscenaJuego");
                             break;
 
-                        case 'P': // <- ¡NUEVO CASO!
+                        case 'P':
                             Debug.Log("Entrando en P");
                             HandleCharacterPositions(ref stream);
                             break;
 
-                        case 'R': // <- ¡NUEVO CASO!
+                        case 'R':
                             HandleRemoteMovement(ref stream);
                             break;
 
@@ -377,6 +377,10 @@ namespace Unity.Networking.Transport.Samples
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.UpdateRemotePlayerPosition(remoteCharacterName, newPosition);
+            }
+            else
+            {
+                print("Game manager es nullo");
             }
         }
     }
