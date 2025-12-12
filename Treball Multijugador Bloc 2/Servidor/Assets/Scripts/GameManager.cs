@@ -21,6 +21,12 @@ public class GameManager : MonoBehaviour
     }
 
 
+    // Necesitas una variable para el estado de vida, por ejemplo:
+    private Dictionary<string, int> playerHealth = new Dictionary<string, int>();
+    public float collisionRadius = 300; // Ajustar según el tamaño de tus objetos UI
+
+    public RectTransform enemyReact;
+
 
     private void Awake()
     {
@@ -140,5 +146,37 @@ public class GameManager : MonoBehaviour
     }
 
 
+
+
+    public void CheckCollisionAndUpdateHealth(string playerName, Vector3 playerPosition)
+    {
+
+        Vector3 enemyPosition = Vector3.zero;
+
+        if (enemyReact != null)
+            {
+                enemyPosition = new Vector3(enemyReact.anchoredPosition.x, enemyReact.anchoredPosition.y, 0);
+            }
+
+
+        float distanceX = Mathf.Abs(playerPosition.x - enemyPosition.x);
+
+
+        print("Distancia x:"+ distanceX);
+
+        // 3. Verificar si hay colisión
+        if (distanceX <= collisionRadius)
+        {
+            print("Colision");
+
+            // Aplicar daño
+            playerHealth[playerName] -= 1;
+
+            Debug.Log($"SERVIDOR: ¡COLISIÓN! {playerName} golpeado. Vida restante: {playerHealth[playerName]}");
+
+            // 4. NOTIFICAR A TODOS LOS CLIENTES SOBRE EL CAMBIO DE VIDA
+            ServerBehaviour.Instance.BroadcastHealthUpdate(playerName, playerHealth[playerName]);
+        }
+    }
 
 }

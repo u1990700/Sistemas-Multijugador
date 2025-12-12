@@ -288,22 +288,24 @@ namespace Unity.Networking.Transport.Samples
 
                             Vector3 newPosition = new Vector3(posX, posY, 0f);
 
-                            // 2. Reenviar la posición a todos los demás clientes
-                            BroadcastMovement(senderConnection, newPosition);
 
-                            // 3. Actualizar la posición en la propia escena del Host
-                            //if (GameManager.Instance != null)
-                            //{
-                                // El Server necesita saber qué personaje está asociado a senderConnection
-                                string charName = m_ClientSelections.ContainsKey(senderConnection)
+                            if (m_GameSceneReady && GameManager.Instance != null)
+                            {
+                                // Obtener el nombre del personaje
+                                string charN = m_ClientSelections.ContainsKey(senderConnection)
                                                 ? m_ClientSelections[senderConnection]
                                                 : "Unknown";
 
-                                Debug.Log($"{charName}");
+                                // Llamar al GameManager para que verifique la colisión y actualice la vida
+                                // Pasamos el nombre del personaje y su NUEVA posición
+                                GameManager.Instance.CheckCollisionAndUpdateHealth(charN, newPosition);
+                                GameManager.Instance.UpdateRemotePlayerPosition(charN, newPosition);
+
+                            }
+
+                            BroadcastMovement(senderConnection, newPosition);
 
 
-                                GameManager.Instance.UpdateRemotePlayerPosition(charName, newPosition);
-                           //}
                         }
                     }
                     else if (cmd == NetworkEvent.Type.Disconnect)
@@ -508,10 +510,6 @@ namespace Unity.Networking.Transport.Samples
                         writer.WriteFixedString32(data.CharacterName);
                         writer.WriteFloat(data.Position.x);
                         writer.WriteFloat(data.Position.y);
-                        print("POSICION X");
-                        print(data.Position.x);
-                        print("POSICION Y");
-                        print(data.Position.y);
 
                     }
                     
@@ -569,6 +567,53 @@ namespace Unity.Networking.Transport.Samples
         {
             m_GameSceneReady = true;
             Debug.Log("SERVIDOR: GameManager listo. Procesando mensajes de juego.");
+        }
+
+        // El código para el enemigo es 'Z' para evitar colisión con 'E' (Accepted Selection)
+        public void UpdateRemoteEnemyPositioni(Vector2 position)
+        {
+            // Enviamos un mensaje 'Z' a todos los clientes activos.
+            for (int i = 0; i < m_Connections.Length; i++)
+            {
+                NetworkConnection recipient = m_Connections[i];
+
+                if (recipient.IsCreated)
+                {
+                    m_Driver.BeginSend(myPipeline, recipient, out var writer);
+
+                    writer.WriteByte((byte)'Z');
+
+                    // Enviamos solo las coordenadas (X e Y)
+                    writer.WriteFixedString32("GoombaEnemy");
+                    writer.WriteFloat(position.x);
+                    writer.WriteFloat(position.y);
+
+                    print(position.x);
+
+                    m_Driver.EndSend(writer);
+                }
+            }
+        }
+        // Fragmento de ServerBehaviour.cs (NUEVO MÉTODO)
+
+        public void BroadcastHealthUpdate(string playerName, int newHealth)
+        {
+            // Envía el mensaje 'L' (Vida/Health Update) a todos los clientes
+            for (int i = 0; i < m_Connections.Length; i++)
+            {
+                NetworkConnection recipient = m_Connections[i];
+
+                if (recipient.IsCreated)
+                {
+                    m_Driver.BeginSend(myPipeline, recipient, out var writer);
+
+                    writer.WriteByte((byte)'X');
+
+                    writer.WriteFixedString32(playerName);
+
+                    m_Driver.EndSend(writer);
+                }
+            }
         }
 
     }
