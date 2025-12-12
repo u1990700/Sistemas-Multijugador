@@ -143,6 +143,13 @@ namespace Unity.Networking.Transport.Samples
                             HandleRemoteMovement(ref stream);
                             break;
 
+                        case 'X':
+                            HandleDamage(ref stream);
+                            break;
+
+                        case 'Z':
+                            HandleRemoteEnemyMovement(ref stream);
+                            break;
                         default:
                             Debug.LogWarning($"Mensaje desconocido: {messageID}");
                             break;
@@ -371,7 +378,7 @@ namespace Unity.Networking.Transport.Samples
                 stream.ReadByte();
             }
 
-            Debug.Log($"[R] Jugador remoto '{remoteCharacterName}' se movió a {newPosition}");
+            //Debug.Log($"[R] Jugador remoto '{remoteCharacterName}' se movió a {newPosition}");
 
             // 3. Notificar al GameManager para que mueva el GameObject
             if (GameManager.Instance != null)
@@ -383,5 +390,50 @@ namespace Unity.Networking.Transport.Samples
                 print("Game manager es nullo");
             }
         }
+
+        void HandleRemoteEnemyMovement(ref DataStreamReader stream)
+        {
+            // 1. ¿Quién se movió?
+            string remoteCharacterName = stream.ReadFixedString32().ToString();
+
+            // 2. ¿A dónde se movió?
+            float posX = stream.ReadFloat();
+            float posY = stream.ReadFloat();
+            Vector3 newPosition = new Vector3(posX, posY, 0f);
+
+            while (stream.Length > stream.GetBytesRead())
+            {
+                stream.ReadByte();
+            }
+
+            Debug.Log($"[Z] Enemigo '{remoteCharacterName}' se movió a {newPosition}");
+
+            // 3. Notificar al GameManager para que mueva el GameObject
+            if (GameManager.Instance != null)
+            {
+                //print(remoteCharacterName + newPosition);
+                GameManager.Instance.UpdateRemoteEnemyPosition(remoteCharacterName, newPosition);   
+            }
+            else
+            {
+                print("Game manager es nullo");
+            }
+        }
+
+        void HandleDamage(ref DataStreamReader stream)
+        {
+            string remoteCharacterName = stream.ReadFixedString32().ToString();
+
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.UpdateDamage(remoteCharacterName);
+            }
+            else
+            {
+                print("Game manager es nullo");
+            }
+        }
+
+
     }
 }

@@ -92,20 +92,46 @@ public class PlayerMovement2D : MonoBehaviour
                 lastPositionSent = currentPosition;
 
                 // --- DEBUG LOG ---
-                Debug.Log($"CLIENTE ENVÍA [M]: Posición {lastPositionSent.x:F2}, {lastPositionSent.y:F2}");
+                //Debug.Log($"CLIENTE ENVÍA [M]: Posición {lastPositionSent.x:F2}, {lastPositionSent.y:F2}");
             }
         }
+    }
+
+    public void takeDamage()
+    {
+
     }
 
     // Detectar cu�ndo toca el suelo
     private void OnCollisionEnter2D(Collision2D collision)
     {
+        //print(collision.gameObject.name + " HOLITA");
         // Si chocamos con un objeto con tag "Ground", consideramos que estamos en el suelo
         if (collision.collider.CompareTag("Ground"))
         {
             isGrounded = true;
         }
+
+        // 'collision.gameObject' es el otro objeto con el que colisionaste
+        // 'collision.gameObject.tag' obtiene la etiqueta de ese objeto
+        if (collision.collider.CompareTag("Player"))
+        {
+            Debug.Log("¡Colisión con un player! (Etiqueta: " + collision.gameObject.name + ")");
+            // Aquí va la lógica para cuando tu personaje choca con un amigo:
+            // - Reproducir sonido
+            // - Dar un bonus
+            // - Cambiar de estado, etc.
+            // Ejemplo: Destroy(collision.gameObject); // Si quieres destruir al amigo
+        }
+        
+        if (collision.collider.CompareTag("Enemigo"))
+        {
+            Debug.Log("¡Colisión con un enemigo!");
+            // Lógica para enemigos
+        }
     }
+
+
 
     private void OnCollisionExit2D(Collision2D collision)
     {

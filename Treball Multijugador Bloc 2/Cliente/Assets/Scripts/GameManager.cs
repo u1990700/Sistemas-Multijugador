@@ -11,6 +11,8 @@ public class GameManager : MonoBehaviour
     [Header("Objetos Estáticos del Servidor")]
     public GameObject perroPersonaje;
     public GameObject creeperPersonaje;
+    public GameObject goombaEnemy;
+    public RectTransform gombaTransform;
     // -----------------------------------------------------------------------
 
     // Diccionario para almacenar instancias de personajes instanciados (solo CLIENTE)
@@ -62,6 +64,10 @@ public class GameManager : MonoBehaviour
         else if (characterName == "Creeper")
         {
             return creeperPersonaje;
+
+        }else if (characterName == "GombaEnemy")
+        {
+            return goombaEnemy;
         }
         return null;
     }
@@ -181,12 +187,52 @@ public class GameManager : MonoBehaviour
                 // 2. Actualizar la posición anclada con los datos recibidos
                 rect.anchoredPosition = new Vector2(position.x, position.y);
 
-                Debug.Log($"HOST/CLIENTE UPDATED: {characterName} a {position.x:F2}, {position.y:F2}");
+                //Debug.Log($"HOST/CLIENTE UPDATED: {characterName} a {position.x:F2}, {position.y:F2}");
             }
         }
         else
         {
             Debug.LogWarning($"UpdateRemotePlayerPosition: Objeto '{characterName}' no está activo o no tiene RectTransform.");
         }
+    }
+
+    public void UpdateRemoteEnemyPosition(string characterName, Vector3 position)
+    {
+        GameObject playerObject = GetHostCharacterObject(characterName); // Intenta obtener el objeto estático
+
+        print(characterName);
+
+        RectTransform rect = gombaTransform;
+        if (rect != null)
+        {
+            // El cliente se mueve con coordenadas de UI (anchoredPosition)
+            rect.anchoredPosition = new Vector2(position.x, position.y);
+        }
+    }
+
+    public void UpdateDamage(string characterName)
+    {
+        GameObject playerObject = GetHostCharacterObject(characterName); // Intenta obtener el objeto estático
+        print(characterName + " RECIBE DAÑO");
+
+        if (playerObject == null)
+        {
+            if (!instancedCharacters.TryGetValue(characterName, out playerObject))
+            {
+                Debug.LogWarning($"UpdateDamage: No encuentro el objeto de '{characterName}' para aplicar daño.");
+                return;
+            }
+        }
+
+        CharacterStats stats = playerObject.GetComponent<CharacterStats>();
+        if (stats == null)
+        {
+            Debug.LogWarning($"UpdateDamage: El objeto '{characterName}' no tiene CharacterStats.");
+            return;
+        }
+
+        stats.TakeDamage();
+
+
     }
 }
